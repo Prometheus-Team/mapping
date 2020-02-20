@@ -1,8 +1,8 @@
 
 class balancer:
-	hueThreshold = 0.1
-	saturationThreshold = 0.2
-	valueThreshold = 0.2
+	hueThreshold = 0.1 * 255
+	saturationThreshold = 0.2 * 255
+	valueThreshold = 0.2 * 255
 
 class identifier:
 	generationPoints = 4

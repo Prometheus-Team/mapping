@@ -28,7 +28,7 @@ class SurfaceIdentifier:
 
 	def plantExplorers(self):
 		#for i in self.generateExplorationPoints():
-		for i in [(15, 15),(30, 20)]:
+		for i in [(30, 30),(60, 40)]:
 			if not self.surfaceSet.isContained(i):
 				explorer = Explorer(i, self.surfaceSet)
 				explorer.declareSurface()
@@ -52,6 +52,14 @@ class SurfaceIdentifier:
 
 		for i in range(img.shape[1]):
 			for j in range(img.shape[0]):
+				cont = False
+				for k in self.explorers:
+					if k.location == (i, j):
+						img[j][i] = np.array((200,200,200))
+						cont = True
+						break
+				if cont:
+					continue
 				for k in self.surfaceSet.surfaces:
 					if k.contains(Point(i, j)):
 						img[j][i] = img[j][i]/2 + np.array(k.color)/2
@@ -70,14 +78,18 @@ class SurfaceIdentifier:
 
 s = SurfaceIdentifier()
 img = cv.imread('../testdata/2.png')
-img = cv.resize(img, (48, 36), interpolation = cv.INTER_AREA)
+img = cv.resize(img, (96, 72), interpolation = cv.INTER_AREA)
 rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 p = Picture(rgb)
 s.setPicture(p)
 ss = s.surfaceSet.createSurface()
 #ss.addRect(10,10,100,100)
-t = time.time()
+btcnt('whole')
 s.identify()
-print(time.time() - t)
-pcnt('expandablePoints')
+etcnt('whole')
+ptcnt('whole')
+ptcnt('iter')
+ptcnt('bttl')
+# pcnt('addEdge')
+#pcnt('expandablePoints')
 s.preview()

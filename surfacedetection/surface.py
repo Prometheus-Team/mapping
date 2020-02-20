@@ -49,7 +49,7 @@ class Surface:
 		expandablePoints = []
 		for i in self.strips:
 			cnt('expandablePoints')
-			for j in self.strips[i].getExpandablePoints():
+			for j in self.strips[i].getExpandablePoints(i):
 				if j not in expandablePoints:
 					expandablePoints.append(j)
 
@@ -120,7 +120,7 @@ class SurfaceStrip:
 			out += " " + str(i)
 		return out
 
-	def getExpandablePoints(self):
+	def getExpandablePoints(self, stripNumber = -1):
 
 		if len(self.edges) == 0:
 			return []
@@ -131,38 +131,27 @@ class SurfaceStrip:
 		onCurrentStrip = []
 		onNextStrip = []
 
-		previousStrip, nextStrip, stripNumber = self.getAdjacentStrips()
+		previousStrip, nextStrip, stripNumber = self.getAdjacentStrips(stripNumber)
 
 		for i in self.edges:
-			onCurrentStrip.extend(i.getHorizontallySurroundingPixels())
-			if previousStrip:
-				onPreviousStrip.extend(i.getVerticallySurroundingPixels())
-			if previousStrip and nextStrip:
-				onNextStrip = onPreviousStrip.copy()
-			elif nextStrip:
-				onNextStrip.extend(i.getVerticallySurroundingPixels())
-
-
-		if previousStrip:
-			for i in onPreviousStrip:
-				if previousStrip.contains(i):
-					onPreviousStrip.remove(i)
-			previousStripNumber = previousStrip.getStripNumber()
-			onPreviousStrip = [(i, previousStripNumber) for i in onPreviousStrip]
-		
-		currentStripNumber = self.getStripNumber()
-		onCurrentStrip = [(i, currentStripNumber) for i in onCurrentStrip]
-
-		if nextStrip:
-			for i in onNextStrip:
-				if nextStrip.contains(i):
-					onNextStrip.remove(i)
-			nextStripNumber = nextStrip.getStripNumber()
-			onNextStrip = [(i, nextStripNumber) for i in onNextStrip]
-
+			horizontals = i.getHorizontallySurroundingPixels()
+			verticals = i.getVerticallySurroundingPixels()
+			onCurrentStrip = [(i, stripNumber) for i in horizontals]
+			previousStripNumber = stripNumber - 1
+			nextStripNumber = stripNumber + 1
+			btcnt('bttl')
+			for j in verticals:
+				if previousStrip:
+					if not previousStrip.contains(j):
+						onPreviousStrip.append((j, previousStripNumber))
+				if nextStrip:
+					if not nextStrip.contains(j):
+						onNextStrip.append((j, nextStripNumber))
+			etcnt('bttl')
 		# print("Previous Strip:", [str(i) for i in onPreviousStrip])
 		# print("Current Strip:", [str(i) for i in onCurrentStrip])
 		# print("Next Strip:", [str(i) for i in onNextStrip])
+
 
 		return onCurrentStrip + onPreviousStrip + onNextStrip
 
@@ -194,8 +183,11 @@ class SurfaceStrip:
 		if stripNumber + 1 in self.surface.strips:
 			return self.surface.strips[stripNumber + 1]
 
-	def getAdjacentStrips(self):
-		stripNumber = self.getStripNumber()
+	def getAdjacentStrips(self, stripNumber = -1):
+
+		if stripNumber == -1:
+			stripNumber = self.getStripNumber()
+
 		previousStrip = None
 		nextStrip = None
 		if stripNumber - 1 in self.surface.strips:
@@ -211,6 +203,8 @@ class SurfaceStrip:
 
 	def addEdgePair(self, edgePair):
 		self.edges.append(edgePair)
+		# cnt('addEdge')
+		self.edges.sort(key = lambda x: x.left)
 		#print("Added Edge Pair:", edgePair)
 
 	def contains(self, pointx):
@@ -226,6 +220,15 @@ class SurfaceStrip:
 		return coverage
 
 	#statics
+
+	# def Subtract(strip, fromStrip):
+		# seq = [(i.right, True, 1), (i.left, False, 1) for i in fromStrip.edges]
+		# seq += [(i.right, True, 0), (i.left, False, 0) for i in strip.edges]
+		# seq.sort(key=lambda x: x[0])
+
+
+
+
 
 	def Merge(strip1, strip2):
 		nstrip = SurfaceStrip()
@@ -258,10 +261,10 @@ class EdgePair:
 			self.right = pointx
 
 	def getVerticallySurroundingPixels(self):
-		return [i for i in range(self.left - 1, self.right + 2)]
+		return (i for i in range(self.left - 1, self.right + 2))
 
 	def getHorizontallySurroundingPixels(self):
-		return [self.left - 1, self.right + 1]
+		return (self.left - 1, self.right + 1)
 
 	#statics
 
