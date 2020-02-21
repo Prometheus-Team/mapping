@@ -26,6 +26,18 @@ for i in t:
 	print()
 
 
+SurfaceStrip.Subtract test
+
+a = [(2,3),(4,5)]
+b = [(1,6)]
+
+c = [(2,4)]
+d = [(1,3)]
+
+e = [(2,5)]
+f = [(1,3),(4,6)]
+
+print(SurfaceStrip.Subtract(f,e))
 
 
 

@@ -4,6 +4,8 @@ import numpy as np
 import time
 import random
 import cv2 as cv
+import multiprocessing as mp
+
 
 from surface import *
 from picture import *
@@ -37,6 +39,9 @@ class SurfaceIdentifier:
 
 	def startExploration(self):
 		print("exploring")
+
+		# result = [pool.apply(Explorer.explore, args=(i, 4, 8)) for i in self.explorers]
+
 		for i in self.explorers:
 			i.explore()
 
@@ -76,6 +81,8 @@ class SurfaceIdentifier:
 
 		return points
 
+
+# pool = mp.Pool(2)
 s = SurfaceIdentifier()
 img = cv.imread('../testdata/2.png')
 img = cv.resize(img, (96, 72), interpolation = cv.INTER_AREA)
@@ -93,3 +100,4 @@ ptcnt('bttl')
 # pcnt('addEdge')
 #pcnt('expandablePoints')
 s.preview()
+pool.close()   

@@ -31,6 +31,7 @@ class Explorer:
 			points = self.surface.getExpandablePoints()
 			if len(points) == 0:
 				break
+			#self.exploreStep(points)
 			self.exploreMultiStep(points)
 		#print("After: " + str(self.surface))
 

@@ -48,11 +48,12 @@ class Surface:
 	def getExpandablePoints(self):
 		expandablePoints = []
 		for i in self.strips:
-			cnt('expandablePoints')
 			for j in self.strips[i].getExpandablePoints(i):
+				btcnt('bttl')
 				if j not in expandablePoints:
 					expandablePoints.append(j)
 
+				etcnt('bttl')
 		#print("Expandable Points:", len(expandablePoints))
 
 		# for i in expandablePoints:
@@ -132,26 +133,36 @@ class SurfaceStrip:
 		onNextStrip = []
 
 		previousStrip, nextStrip, stripNumber = self.getAdjacentStrips(stripNumber)
+		previousStripNumber = stripNumber - 1
+		nextStripNumber = stripNumber + 1
 
+		# for i in self.edges:
+		# 	horizontals = i.getHorizontallySurroundingPixels()
+		# 	verticals = i.getVerticallySurroundingPixels()
+		# 	onCurrentStrip = [(i, stripNumber) for i in horizontals]
+		# 	for j in verticals:
+		# 		if previousStrip:
+		# 			if not previousStrip.contains(j):
+		# 				onPreviousStrip.append((j, previousStripNumber))
+		# 		if nextStrip:
+		# 			if not nextStrip.contains(j):
+		# 				onNextStrip.append((j, nextStripNumber))
+
+		pairs = []
+		
 		for i in self.edges:
-			horizontals = i.getHorizontallySurroundingPixels()
-			verticals = i.getVerticallySurroundingPixels()
-			onCurrentStrip = [(i, stripNumber) for i in horizontals]
-			previousStripNumber = stripNumber - 1
-			nextStripNumber = stripNumber + 1
-			btcnt('bttl')
-			for j in verticals:
-				if previousStrip:
-					if not previousStrip.contains(j):
-						onPreviousStrip.append((j, previousStripNumber))
-				if nextStrip:
-					if not nextStrip.contains(j):
-						onNextStrip.append((j, nextStripNumber))
-			etcnt('bttl')
-		# print("Previous Strip:", [str(i) for i in onPreviousStrip])
-		# print("Current Strip:", [str(i) for i in onCurrentStrip])
-		# print("Next Strip:", [str(i) for i in onNextStrip])
+			pixelRange = i.getHorizontallySurroundingPixels()
+			pairs.append(pixelRange)
+			onCurrentStrip = [(i, stripNumber) for i in pixelRange]
 
+		previousRange = SurfaceStrip.Subtract(pairs, previousStrip.getPairs())
+		nextRange = SurfaceStrip.Subtract(pairs, nextStrip.getPairs())
+		
+
+		for i in previousRange:
+			onPreviousStrip += [(j, previousStripNumber) for j in range(i[0], i[1] + 1)]
+		for i in nextRange:
+			onNextStrip += [(j, nextStripNumber) for j in range(i[0], i[1] + 1)]
 
 		return onCurrentStrip + onPreviousStrip + onNextStrip
 
@@ -201,6 +212,9 @@ class SurfaceStrip:
 			if self.surface.strips[i] == self:
 				return i
 
+	def getPairs(self):
+		return [(i.left, i.right) for i in self.edges]
+
 	def addEdgePair(self, edgePair):
 		self.edges.append(edgePair)
 		# cnt('addEdge')
@@ -221,13 +235,42 @@ class SurfaceStrip:
 
 	#statics
 
-	# def Subtract(strip, fromStrip):
-		# seq = [(i.right, True, 1), (i.left, False, 1) for i in fromStrip.edges]
-		# seq += [(i.right, True, 0), (i.left, False, 0) for i in strip.edges]
-		# seq.sort(key=lambda x: x[0])
+	def Subtract(fromPairs, pairs):
 
+		if (len(pairs) == 0):
+			return fromPairs
 
+		if (len(fromPairs) == 0):
+			return []
 
+		FROMSTART = 2
+		START = 1
+		FROMEND = -2
+		END = -1
+
+		seq = [(i[1], FROMSTART) for i in fromPairs]
+		seq += [(i[1], START) for i in pairs]
+		seq += [(i[0], FROMEND) for i in fromPairs]
+		seq += [(i[0], END) for i in pairs]
+		seq.sort(key = lambda x: x[0], reverse = True)
+
+		#print(seq)
+
+		difference = []
+
+		lkey = None
+		lstatus = 0
+		status = 0
+		for i in seq:
+			status += i[1]
+			if (lstatus == 2 and status != 1) and lkey != i[0]:
+				difference.append((i[0], lkey))
+			lstatus = status
+			lkey = i[0]
+
+		difference.reverse()
+
+		return difference
 
 
 	def Merge(strip1, strip2):
@@ -263,6 +306,9 @@ class EdgePair:
 	def getVerticallySurroundingPixels(self):
 		return (i for i in range(self.left - 1, self.right + 2))
 
+	def getVerticallySurroundingPixelRanges(self):
+		return (self.left - 1, self.right + 1)
+
 	def getHorizontallySurroundingPixels(self):
 		return (self.left - 1, self.right + 1)
 
@@ -292,3 +338,9 @@ class EdgePair:
 
 	def Merge(pair1, pair2):
 		return EdgePair(min(pair1.left, pair2.left), max(pair1.right, pair2.right))
+
+
+e = [(4,19)]
+f = [(0,20)]
+
+print(SurfaceStrip.Subtract(f,e))
