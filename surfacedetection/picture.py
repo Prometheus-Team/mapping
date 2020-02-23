@@ -13,8 +13,11 @@ class Picture:
 	def getDepthAt(self, point):
 		return self.depth[point[1]][point[0]]
 
+	def getMultiHSVAt(self, points):
+		return self.hsv[points]
+
 	def getHSVAt(self, point):
-		return self.hsv[point[1]][point[0]]
+		return self.hsv[point[0]][point[1]]
 
 	def getWidth(self):
 		return self.rgb.shape[1]

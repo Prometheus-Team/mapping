@@ -6,8 +6,8 @@ import random
 import cv2 as cv
 import multiprocessing as mp
 
-
-from surface import *
+from surface import Surface
+from surfaceset import SurfaceSet
 from picture import *
 from pointgeneration import *
 import values
@@ -32,7 +32,7 @@ class SurfaceIdentifier:
 		# points  = self.generateExplorationPoints()
 		# print(points)
 		# for i in points:
-		for i in [(30, 30),(60, 40)]:#, (27, 13)]:
+		for i in [(30,30),(30,60)]:
 			if not self.surfaceSet.isContained(i):
 				explorer = Explorer(i, self.surfaceSet)
 				explorer.declareSurface()
@@ -57,19 +57,15 @@ class SurfaceIdentifier:
 
 		img = np.copy(self.picture.rgb)
 
-		for i in range(img.shape[1]):
-			for j in range(img.shape[0]):
-				cont = False
-				for k in self.explorers:
-					if k.location == (i, j):
-						img[j][i] = np.array((200,200,200))
-						cont = True
-						break
-				if cont:
-					continue
-				for k in self.surfaceSet.surfaces:
-					if k.contains(Point(i, j)):
-						img[j][i] = img[j][i]/2 + np.array(k.color)/2
+		for i in self.surfaceSet.surfaces:
+			d = 3
+			color = np.tile(i.color, self.picture.getShape()).reshape(self.picture.getShape()[0], self.picture.getShape()[1], d)
+			mask = np.repeat(i.mask, d).reshape(self.picture.getShape()[0], self.picture.getShape()[1], d)
+			mix = ((img + color)/2).astype(np.int32)
+			img = np.where(mask == 1, mix, img)
+
+		for i in self.explorers:
+			img[i.location] = np.array((255,255,255)) - img[i.location]
 
 		implt = plt.imshow(img)
 
@@ -87,7 +83,7 @@ class SurfaceIdentifier:
 # pool = mp.Pool(2)
 s = SurfaceIdentifier()
 img = cv.imread('../testdata/2.png')
-img = cv.resize(img, (96, 72), interpolation = cv.INTER_AREA)
+img = cv.resize(img, (96, 54), interpolation = cv.INTER_AREA)
 rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 p = Picture(rgb)
 s.setPicture(p)

@@ -41,7 +41,10 @@ class HSVBalancer:
 		btcnt('iter')
 		# print("Pixels:",pixels)
 		diff = pixels - self.cores
+		# print("Differences:", diff)		
+		# print("Thresholds:", self.thresholds)
 		adaptable = np.logical_and(-self.thresholds <= diff, diff <=  self.thresholds)
+		# print("Adaptable:", diff)
 		adaptable = np.all(adaptable, axis = 1)
 		self.amount += adaptable.size
 		adaptableMask = np.tile(adaptable.reshape(adaptable.size, 1), 3)

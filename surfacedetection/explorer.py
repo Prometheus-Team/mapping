@@ -34,7 +34,9 @@ class Explorer:
 		#print("Before: " + str(self.surface))
 		# print("Expandables:", [str(i) for i in points])
 		for i in range(30):
+			btcnt('bttl')
 			points = self.surface.getExpandablePoints()
+			etcnt('bttl')
 			# points = self.surface.getMultiExpandablePoints()
 			# print("Singu:",spoints)
 			# print("Multi:",points)
@@ -43,7 +45,6 @@ class Explorer:
 			#self.exploreStep(points)
 			self.exploreMultiStep(points)
 		#print("After: " + str(self.surface))
-
 
 	def exploreStep(self, points):
 		for i in points:
@@ -57,12 +58,14 @@ class Explorer:
 				self.rejectedPoints.append(i)
 
 	def exploreMultiStep(self, points):
-		pixels = np.array([self.surface.surfaceSet.picture.getHSVAt(i) for i in points])
+		# print("Multistep Points:", points)
+		pixels = self.surface.surfaceSet.picture.getMultiHSVAt(points)
+		# print("Pixels:", pixels)
 		adaptable = self.surface.balancer.multiBalance(pixels)
-		for i in range(len(points)):
+		# print("Adaptable:", adaptable)
+		for i in range(len(points[0])):
 			if adaptable[i]:
-				self.surface.appendPoint(points[i])
-				Explorer.spots[points[i]] = 1
+				self.surface.appendPoint((points[0][i], points[1][i]))
 
 
 
