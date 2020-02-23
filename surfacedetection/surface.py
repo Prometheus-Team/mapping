@@ -1,6 +1,7 @@
 from util import *
 from balancer import HSVBalancer
 from point import Point
+import numpy as np
 import random
 
 class SurfaceSet:
@@ -29,6 +30,7 @@ class SurfaceSet:
 		return surface
 
 
+
 class Surface:
 
 	def __init__(self, surfaceSet):
@@ -42,8 +44,10 @@ class Surface:
 		out = ""
 		for i in self.strips:
 			if len(self.strips[i].edges) > 0:
-				out += " " + str(self.strips[i])
+				out += " " + str(self.strips[i]) + "\n"
 		return out
+
+
 
 	def getExpandablePoints(self):
 		expandablePoints = []
@@ -54,14 +58,25 @@ class Surface:
 					expandablePoints.append(j)
 
 				etcnt('bttl')
+
+		return expandablePoints
+
+	def getMultiExpandablePoints(self):
+		expandablePoints = np.zeros(self.surfaceSet.picture.getShape())
+		for i in self.strips:
+			btcnt('bttl')
+			indices = np.array(self.strips[i].getExpandablePoints(i), dtype=np.int64).transpose()
+			print(indices)
+			expandablePoints[indices] = 1
+			etcnt('bttl')
 		#print("Expandable Points:", len(expandablePoints))
 
 		# for i in expandablePoints:
 		# 	container = self.surfaceSet.getSurfaceContaining(i)
 		# 	if container not in self.adjacents:
 		# 		self.adjacents.append(i)
-
-		return expandablePoints
+		print(np.array(np.where(expandablePoints == 1)))
+		return np.array(np.where(expandablePoints == 1)).transpose()
 
 	def addRect(self, x, y, x1, y1):
 		for i in range(y, y1):
@@ -135,34 +150,54 @@ class SurfaceStrip:
 		previousStrip, nextStrip, stripNumber = self.getAdjacentStrips(stripNumber)
 		previousStripNumber = stripNumber - 1
 		nextStripNumber = stripNumber + 1
+		width = self.surface.surfaceSet.picture.getWidth()		
+		# # print("Width is", width)
 
 		# for i in self.edges:
 		# 	horizontals = i.getHorizontallySurroundingPixels()
 		# 	verticals = i.getVerticallySurroundingPixels()
-		# 	onCurrentStrip = [(i, stripNumber) for i in horizontals]
+		# 	onCurrentStrip = [(i, stripNumber) for i in horizontals if i < width]
 		# 	for j in verticals:
 		# 		if previousStrip:
-		# 			if not previousStrip.contains(j):
+		# 			if not previousStrip.contains(j) and j < width:
 		# 				onPreviousStrip.append((j, previousStripNumber))
 		# 		if nextStrip:
-		# 			if not nextStrip.contains(j):
+		# 			if not nextStrip.contains(j) and j < width:
 		# 				onNextStrip.append((j, nextStripNumber))
 
+		# print("Iterative:",onCurrentStrip + onPreviousStrip + onNextStrip)
+
+
+
+		onPreviousStrip = []
+		onCurrentStrip = []
+		onNextStrip = []
 		pairs = []
 		
 		for i in self.edges:
 			pixelRange = i.getHorizontallySurroundingPixels()
 			pairs.append(pixelRange)
-			onCurrentStrip = [(i, stripNumber) for i in pixelRange]
+			onCurrentStrip = [(i, stripNumber) for i in pixelRange if i < width]
 
-		previousRange = SurfaceStrip.Subtract(pairs, previousStrip.getPairs())
-		nextRange = SurfaceStrip.Subtract(pairs, nextStrip.getPairs())
+		previousRange = []
+		nextRange = []
+
+
+		if previousStrip:		
+			# print("Subtract:",previousStrip.getPairs(),"from",pairs)
+			previousRange = SurfaceStrip.Subtract(pairs, previousStrip.getPairs())
+		if nextStrip:
+			# print("Subtract:",nextStrip.getPairs(),"from",pairs)
+			nextRange = SurfaceStrip.Subtract(pairs, nextStrip.getPairs())
+			# print("Output:", nextRange)
 		
-
 		for i in previousRange:
-			onPreviousStrip += [(j, previousStripNumber) for j in range(i[0], i[1] + 1)]
+			onPreviousStrip += [(j, previousStripNumber) for j in range(i[0], i[1] + 1) if j < width]
 		for i in nextRange:
-			onNextStrip += [(j, nextStripNumber) for j in range(i[0], i[1] + 1)]
+			onNextStrip += [(j, nextStripNumber) for j in range(i[0], i[1] + 1) if j < width]
+
+
+		# print("Subtract:",onCurrentStrip + onPreviousStrip + onNextStrip)
 
 		return onCurrentStrip + onPreviousStrip + onNextStrip
 
@@ -261,14 +296,19 @@ class SurfaceStrip:
 		lkey = None
 		lstatus = 0
 		status = 0
+
 		for i in seq:
 			status += i[1]
 			if (lstatus == 2 and status != 1) and lkey != i[0]:
-				difference.append((i[0], lkey))
+				difference.append((i[0] + 1, lkey - 1))
 			lstatus = status
 			lkey = i[0]
 
 		difference.reverse()
+
+		if len(difference) > 0:
+			difference[0] = (difference[0][0] - 1, difference[0][1])
+			difference[-1] = (difference[-1][0], difference[-1][1] + 1)
 
 		return difference
 
@@ -340,7 +380,7 @@ class EdgePair:
 		return EdgePair(min(pair1.left, pair2.left), max(pair1.right, pair2.right))
 
 
-e = [(4,19)]
-f = [(0,20)]
+# e = [(2,3),(5,6)]
+# f = [(1,7)]
 
-print(SurfaceStrip.Subtract(f,e))
+# print(SurfaceStrip.Subtract(f,e))

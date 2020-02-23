@@ -5,7 +5,7 @@ class balancer:
 	valueThreshold = 0.2 * 255
 
 class identifier:
-	generationPoints = 4
+	generationPoints = 10
 	generationPointsFactorPerIteration = 3
 	explorationThreshold = 0.99
 	

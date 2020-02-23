@@ -22,3 +22,6 @@ class Picture:
 	def getHeight(self):
 		return self.rgb.shape[0]
 
+	def getShape(self):
+		return self.rgb.shape[:2]
+

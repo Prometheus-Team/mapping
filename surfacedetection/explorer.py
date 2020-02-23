@@ -4,6 +4,12 @@ from util import *
 
 class Explorer:
 
+	spots = []
+
+	def initializeSpots(width, height):
+		Explorer.spots = np.zeros((width, height))
+
+
 	def __init__(self, location, surfaceset):
 		self.location = location
 		self.surfaceSet = surfaceset
@@ -29,6 +35,9 @@ class Explorer:
 		# print("Expandables:", [str(i) for i in points])
 		for i in range(30):
 			points = self.surface.getExpandablePoints()
+			# points = self.surface.getMultiExpandablePoints()
+			# print("Singu:",spoints)
+			# print("Multi:",points)
 			if len(points) == 0:
 				break
 			#self.exploreStep(points)
@@ -53,6 +62,7 @@ class Explorer:
 		for i in range(len(points)):
 			if adaptable[i]:
 				self.surface.appendPoint(points[i])
+				Explorer.spots[points[i]] = 1
 
 
 

@@ -29,8 +29,10 @@ class SurfaceIdentifier:
 		self.startExploration()
 
 	def plantExplorers(self):
-		#for i in self.generateExplorationPoints():
-		for i in [(30, 30),(60, 40)]:
+		# points  = self.generateExplorationPoints()
+		# print(points)
+		# for i in points:
+		for i in [(30, 30),(60, 40)]:#, (27, 13)]:
 			if not self.surfaceSet.isContained(i):
 				explorer = Explorer(i, self.surfaceSet)
 				explorer.declareSurface()
@@ -41,7 +43,7 @@ class SurfaceIdentifier:
 		print("exploring")
 
 		# result = [pool.apply(Explorer.explore, args=(i, 4, 8)) for i in self.explorers]
-
+		Explorer.initializeSpots(self.surfaceSet.picture.getWidth(), self.surfaceSet.picture.getHeight())
 		for i in self.explorers:
 			i.explore()
 
@@ -99,5 +101,5 @@ ptcnt('iter')
 ptcnt('bttl')
 # pcnt('addEdge')
 #pcnt('expandablePoints')
-s.preview()
-pool.close()   
+# print(s.surfaceSet.surfaces[1])
+s.preview()  
