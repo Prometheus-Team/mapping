@@ -4,19 +4,19 @@ from util import *
 
 class Explorer:
 
-	spots = []
-
-	def initializeSpots(width, height):
-		Explorer.spots = np.zeros((width, height))
-
 
 	def __init__(self, location, surfaceset):
 		self.location = location
 		self.surfaceSet = surfaceset
 		self.surface = None
-
+		self.lCoverage = -1
+		self.completed = False
 		#remove because dynamic cores might change rejected status
 		self.rejectedPoints = []
+
+	def reset(self):
+		self.lCoverage = -1
+		self.completed = False
 
 	def isOnSurface(self):
 		for i in self.surfaceSet.surfaces:
@@ -30,21 +30,25 @@ class Explorer:
 		self.surface.appendPoint(self.location)
 		self.surface.balancer.setCore(self.surface.surfaceSet.picture.getHSVAt(self.location))
 
+
 	def explore(self):
-		#print("Before: " + str(self.surface))
-		# print("Expandables:", [str(i) for i in points])
-		for i in range(30):
-			btcnt('bttl')
-			points = self.surface.getExpandablePoints()
-			etcnt('bttl')
-			# points = self.surface.getMultiExpandablePoints()
-			# print("Singu:",spoints)
-			# print("Multi:",points)
-			if len(points) == 0:
-				break
-			#self.exploreStep(points)
-			self.exploreMultiStep(points)
-		#print("After: " + str(self.surface))
+
+		if self.completed:
+			return
+
+		# btcnt('bttl')
+		points = self.surface.getExpandablePoints()
+		# etcnt('bttl')
+		if len(points) == 0:
+			# print("Complete",self.surface.color,"because no more expandable points")
+			self.completed = True
+			return
+		self.exploreMultiStep(points)
+		coverage = self.surface.getCoverage()
+		if (coverage == self.lCoverage):
+			# print("Complete",self.surface.color,"because coverage",coverage,"reached,",self.surface.balancer.cores)
+			self.completed = True
+		self.lCoverage = coverage
 
 	def exploreStep(self, points):
 		for i in points:
@@ -63,9 +67,14 @@ class Explorer:
 		# print("Pixels:", pixels)
 		adaptable = self.surface.balancer.multiBalance(pixels)
 		# print("Adaptable:", adaptable)
+
+		#just add adaptable mask to surface mask
+		# btcnt('bttl')
 		for i in range(len(points[0])):
 			if adaptable[i]:
 				self.surface.appendPoint((points[0][i], points[1][i]))
+		# etcnt('bttl')
+
 
 
 

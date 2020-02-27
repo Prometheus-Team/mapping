@@ -1,4 +1,4 @@
-
+import numpy as np
 from surface import Surface
 
 class SurfaceSet:
@@ -6,6 +6,13 @@ class SurfaceSet:
 	def __init__(self):
 		self.surfaces = []
 		self.picture = None
+
+	def addSurface(self, surface):
+		self.surfaces.append(surface)
+		surface.surfaceSet = self
+
+	def removeSurface(self, surface):
+		self.surfaces.remove(surface)
 
 	def isContained(self, point):
 		return self.getSurfaceContaining(point) != None
@@ -25,3 +32,10 @@ class SurfaceSet:
 		surface = Surface(self)
 		self.surfaces.append(surface)
 		return surface
+
+	def checkForOverlaps(self):
+		maskSum = np.zeros(self.picture.getShape())
+		for i in self.surfaces:
+			maskSum += i.mask
+		maskSum = np.clip(maskSum - 1, 0, 1)
+		return np.count_nonzero(maskSum) > 0, maskSum 

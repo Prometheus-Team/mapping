@@ -1,6 +1,12 @@
 import numpy as np
 import time
 
+def NP(function, array):
+	lst = []
+	for i in array:
+		lst.append(function(i))
+	return np.array(lst)
+
 def Between(x, x1, x2):
 	return x >= x1 and x <= x2
 

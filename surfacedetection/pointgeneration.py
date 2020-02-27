@@ -8,7 +8,7 @@ class PointGeneration:
 	def generateRandomPoints(width, height, amount):
 		points = []
 		for i in range(amount):
-			points.append((random.randrange(0, width), random.randrange(0, height)))
+			points.append((random.randrange(0, height), random.randrange(0, width)))
 		return points
 
 	def generateUniformPoints(width, height, amount):
@@ -16,7 +16,7 @@ class PointGeneration:
 		space = PointGeneration.getSpacing(width, height, amount)
 		for i in range(int(width/space)):
 			for j in range(int(height/space)):
-				points.append((i*space, j*space))
+				points.append((int((j + 1)*space), int((i + 1)*space)))
 
 		return points
 
@@ -25,7 +25,7 @@ class PointGeneration:
 		variance = PointGeneration.getSpacing(width, height, amount) * varianceFactor
 
 		for i in range(len(points)):
-			points[i] = (PointGeneration.randomize(points[i][0], variance, width), PointGeneration.randomize(points[i][1], variance, height))
+			points[i] = (PointGeneration.randomize(points[i][0], variance, height), PointGeneration.randomize(points[i][1], variance, width))
 
 		return points
 

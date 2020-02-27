@@ -2,9 +2,22 @@ import numpy as np
 import random
 
 from balancer import HSVBalancer
-
+from util import *
 
 class Surface:
+
+	def Merge(surfaces):
+		surface = Surface(surfaces[0].surfaceSet)
+		surface.balancer = HSVBalancer()
+		surface.balancer.cores = np.average(NP(lambda x: x.balancer.cores, surfaces), axis=0)
+		# print("Cores:", surfaces[0].balancer.cores.shape, surface.balancer.cores.shape)
+		surface.balancer.amount = np.sum(NP(lambda x: x.balancer.amount, surfaces))
+		# print("Amount:", surfaces[0].balancer.amount, surface.balancer.amount)
+		surface.mask = np.clip(np.sum(NP(lambda x: x.mask, surfaces), axis=0), 0,1)
+		# print("Mask:", surfaces[0].mask.shape, surface.mask.shape)
+		surface.color = surfaces[0].color
+		return surface
+
 
 	def __init__(self, surfaceSet):
 		self.surfaceSet = surfaceSet
@@ -17,6 +30,8 @@ class Surface:
 		shift = 1
 		rshift = np.pad(self.mask, ((0,0),(shift,0)))[:,:-shift]
 		lshift = np.pad(self.mask, ((0,0),(0,shift)))[:,shift:]
+		# dshift = np.pad(self.mask, ((shift, 0), (0, 0)))[:-shift,:]
+		# ushift = np.pad(self.mask, ((0,shift),(0,0)))[shift:,:]
 		
 		hshift = np.maximum(np.maximum(rshift, lshift), self.mask)
 

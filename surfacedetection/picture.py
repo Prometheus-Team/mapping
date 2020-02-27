@@ -1,10 +1,12 @@
 import cv2 as cv
+import numpy as np
 
 class Picture:
 
 	def __init__(self, img):
 		self.rgb = img
-		self.hsv = cv.cvtColor(img, cv.COLOR_RGB2HSV)
+		self.hsv = cv.cvtColor(img, cv.COLOR_RGB2HSV).astype(np.int16)
+		self.hsv[:,:,1] = np.minimum(self.hsv[:,:,1], self.hsv[:,:,2])
 		self.depth = None
 
 	def getRGBAt(self, point):
