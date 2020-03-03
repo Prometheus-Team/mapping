@@ -45,7 +45,7 @@ class HSVBalancer:
 		diff = pixels - self.cores
 		diff[:,0] = np.minimum(diff[:,0], 256 - diff[:,0])
 		# print("Differences:", diff)		
-		# print("Thresholds:", self.thresholds)
+		# print("Thresholds:", self.thresholds) 
 		adaptable = np.logical_and(-self.thresholds <= diff, diff <=  self.thresholds)
 		# print("Adaptable:", diff)
 		adaptable = np.all(adaptable, axis = 1)

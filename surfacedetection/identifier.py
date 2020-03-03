@@ -102,7 +102,6 @@ class SurfaceIdentifier:
 			img[i.location] = np.array((255,255,255)) - img[i.location]
 
 		implt = plt.imshow(img)
-
 		plt.show()
 
 	def generateExplorationPoints(self):
@@ -116,8 +115,9 @@ class SurfaceIdentifier:
 
 # pool = mp.Pool(2)
 s = SurfaceIdentifier()
-img = cv.imread('../testdata/5.png')
+img = cv.imread('../testdata/3.png')
 img = cv.resize(img, (96, 54), interpolation = cv.INTER_AREA)
+# img = cv.resize(img, (192, 108), interpolation = cv.INTER_AREA)
 # img = cv.resize(img, (48, 27), interpolation = cv.INTER_AREA)
 rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 p = Picture(rgb)
