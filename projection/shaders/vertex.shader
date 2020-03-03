@@ -14,7 +14,7 @@ void main() {
 	gl_Position = transform * vec4(position, 1.0f);
 	newColor = color;
 	OutTexCoords = InTexCoords;
-	gl_PointSize = (position.x + position.y + position.z + 1)*10;
+	//gl_PointSize = (position.x + position.y + position.z + 1)*10;
 
 }
 
