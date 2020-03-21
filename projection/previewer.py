@@ -3,6 +3,8 @@ import numpy as np
 import OpenGL.GL.shaders
 import pyrr
 import time
+import threading
+
 from PIL import Image
 
 from pygame.locals import *
@@ -10,13 +12,14 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 class R:
-	previewResolution = (800,800)
+	previewResolution = (1200,1200)
 	vertexShaderPath = "shaders/vertex.shader"
 	fragmentShaderPath = "shaders/fragment.shader"
+	autoRotateRate = 0.1
+	defaultPointSize = 1
 
 
-
-class ModelPreview:
+class ModelPreview(threading.Thread):
 
 	POINTS = 1
 	WIREFRAME = 2
@@ -24,6 +27,7 @@ class ModelPreview:
 	TEXTURED = 4
 
 	def __init__(self):
+		threading.Thread.__init__(self)
 		self.renderMode = GL_POINTS
 		self.vertices = np.array([],dtype=np.float32)
 		self.indices = np.array([],dtype=np.int32)
@@ -32,7 +36,15 @@ class ModelPreview:
 		self.controller = ModelController(self)
 		self.rowlen = 0
 		self.shader = None
+		self.permaRotation = pyrr.Matrix44.from_x_rotation(0)
+		self.tempRotation = pyrr.Matrix44.from_x_rotation(0)
+		self.autoRotation = pyrr.Matrix44.from_x_rotation(0)
+		self.updateBuffersValue = False
+		self.updateAttribsValue = False
+
+	def run(self):
 		self.launchPreview()
+		self.startRunning()
 
 	def setRenderMode(self, renderMode):
 		if (renderMode == ModelPreview.POINTS):
@@ -40,8 +52,9 @@ class ModelPreview:
 			self.indices = np.linspace(0, len(self.vertices)/3 - 1, len(self.vertices)/3, dtype=np.int32)
 		elif renderMode == ModelPreview.WIREFRAME:
 			self.renderMode = GL_LINES
-			self.indices = self.edgeIndices
-		self.updateBuffers()
+			if self.edgeIndices != None:
+				self.indices = self.edgeIndices
+		self.setUpdateBuffers()
 
 	def getShader(self, path):
 		return open(path).read()
@@ -58,7 +71,7 @@ class ModelPreview:
 
 		glUseProgram(self.shader)
 
-		glClearColor(0.0, 0.0, 0.0, 1.0)
+		glClearColor(0.2, 0.2, 0.2, 1.0)
 		glEnable(GL_DEPTH_TEST)
 		glPointSize(1)
 		# glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
@@ -103,94 +116,142 @@ class ModelPreview:
 		# glVertexAttribPointer(texCoords, 2, GL_FLOAT, GL_FALSE,  cube.itemsize * 8, ctypes.c_void_p(24))
 		# glEnableVertexAttribArray(texCoords)
 
+	def startRunning(self):
+		self.runPreview()
+
+
 	def runPreview(self):
-		dragging = False
-		dragMousePosition = (0,0)
-		permaRotation = pyrr.Matrix44.from_x_rotation(0)
-		tempRotation = pyrr.Matrix44.from_x_rotation(0)
-
 		while True:
+			self.controller.updateController()
 
-			
+			if self.updateBuffersValue:
+				self.updateBuffers()
+				self.updateBuffersValue = False
+
 			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 
 			persp = pyrr.Matrix44.perspective_projection(45, 1, 0.1, 100)
-			offset = pyrr.Matrix44.from_translation((0,0,-5))
-			# rot_x = pyrr.Matrix44.from_x_rotation(0.5 * time.time())
-			# rot_y = pyrr.Matrix44.from_y_rotation(0.8 * time.time())
+			offset = pyrr.Matrix44.from_translation((0,0,-5)) * pyrr.Matrix44.from_x_rotation(np.pi/-6)# * pyrr.Matrix44.from_y_rotation(np.pi/6)
 
 			transformLoc = glGetUniformLocation(self.shader, "transform")
-			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, persp * offset * dragRotation * permadrag)
-			glDrawElements(GL_POINTS, len(self.indices), GL_UNSIGNED_INT, None)
+			self.autoRotation = pyrr.Matrix44.from_y_rotation(R.autoRotateRate * time.time()/3)
+			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, persp * offset * self.tempRotation * self.permaRotation)
+			glDrawElements(self.renderMode, len(self.indices), GL_UNSIGNED_INT, None)
 
 			pg.display.flip()
 			pg.time.wait(10)
 
-	def ShowPolies(self, points, polies):
+
+	def buildVertices(self, points, color=None, pointSize=None, texCoord=None):
+		rowlen = points.shape[0]
+
+		if color == None:
+			colors = np.ones((rowlen, 3)).astype(dtype=np.float32)
+		elif len(color) == 3:
+			colors = np.tile(color, rowlen).reshape((rowlen, 3)).astype(dtype=np.float32)
+		else:
+			colors = color.astype(dtype=np.float32)
+
+		if pointSize == None:
+			pointSizes = np.array(R.defaultPointSize).repeat(rowlen).reshape((rowlen,1)).astype(dtype=np.float32)
+		elif type(pointSize) == int:
+			pointSizes = np.array(pointSize).repeat(rowlen).reshape((rowlen,1)).astype(dtype=np.float32)
+		else:
+			pointSizes = pointSize.astype(dtype=np.float32)
+
+		if texCoord == None:
+			texCoords = np.zeros((rowlen,2)).astype(dtype=np.float32)
+		elif len(texCoord) == 2:
+			texCoords = np.tile(texCoord, rowlen).reshape((rowlen, 2)).astype(dtype=np.float32)
+		else:
+			texCoords = texCoord.astype(dtype=np.float32)
+
+		self.vertices = np.concatenate((points, colors, pointSizes, texCoords), axis=1)
+		self.rowlen = self.vertices.shape[1]
+		# print(self.vertices.shape)
+		self.vertices = self.vertices.reshape((-1,))
+
+
+	def ShowPolies(self, points, polies, color=None, pointSize=None, texCoord=None):
 		self.vertices = np.array(points, dtype=np.float32)
 		self.polyIndices = np.array(polies, dtype=np.int32)
 		self.edgeIndices = self.polyIndices
 		self.indices = self.polyIndices
-		self.rowlen = 3
 		self.setRenderMode(ModelPreview.TEXTURED)
-		self.launchPreview()
 
-	def ShowEdges(self, points, edges):
+	def ShowEdges(self, points, edges, color=None, pointSize=None, texCoord=None):
 		self.vertices = np.array(points, dtype=np.float32)
 		self.edgeIndices = np.array(edges, dtype=np.int32)
 		self.polyIndices = None
-		self.rowlen = 3
 		self.indices = self.edgeIndices
 		self.setRenderMode(ModelPreview.WIREFRAME)
-		self.launchPreview()
 
-	def ShowPoints(self, points):
-		self.vertices = np.array(points, dtype=np.float32)
-		self.rowlen = 3
+	def ShowPoints(self, points, color=None, pointSize=None, texCoord=None):
+		self.buildVertices(points, color=color, pointSize=pointSize, texCoord=texCoord)
+		self.edgeIndices = None
+		self.polyIndices = None
 		self.setRenderMode(ModelPreview.POINTS)
-		self.launchPreview()
-		self.runPreview()
 
-	def runControl(self):
- 		pass
+	def setUpdateBuffers(self):
+		self.updateBuffersValue = True
 
 
-def ModelController:
+
+class ModelController:
 
 	def __init__(self, previewer):
 		self.previewer = previewer
 		self.dragging = False
-		self.handlers = [(pg.QUIT,(self.Quit)), (pg.MOUSEBUTTONDOWN, (self.MouseDown)), (pg.MOUSEBUTTONUP, (self.MouseUp)), (pg.MOUSEMOTION , (self.MouseMove))]
+		self.dragMousePosition = (0,0)
+		self.handlers = [(pg.QUIT,(self.Quit,)), 
+						(pg.MOUSEBUTTONDOWN, (self.MouseDown,)), 
+						(pg.MOUSEBUTTONUP, (self.MouseUp,)), 
+						(pg.MOUSEMOTION , (self.MouseMove,)),
+						(pg.KEYDOWN, (self.KeyDown,))]
 
 	def updateController(self):
 		for event in pg.event.get():
 			for handlerPair in self.handlers:
-				if event == handlerPair[0]:
+				if event.type == handlerPair[0]:
 					for handler in handlerPair[1]:
-						handler()
+						handler(event)
 
-	def Quit(self):
+	def Quit(self, event):
 		pg.quit()
 		quit()
 
-	def MouseUp(self):
+	def MouseUp(self, event):
 		self.dragging = False
-		dragMousePosition = (0,0)
-		permadrag = dragRotation * permadrag
-		dragRotation = pyrr.Matrix44.from_x_rotation(0)
+		self.dragMousePosition = (0,0)
+		self.previewer.permaRotation = self.previewer.tempRotation * self.previewer.permaRotation
+		self.previewer.tempRotation = pyrr.Matrix44.from_x_rotation(0)
 
-	def MouseDown(self):
+	def MouseDown(self, event):
 		self.dragging = True
-		dragMousePosition = pg.mouse.get_pos()
+		self.dragMousePosition = pg.mouse.get_pos()
 
-	def MouseMove(self):
+	def MouseMove(self, event):
 		if self.dragging:
-			mouseOffset = (np.array(dragMousePosition) - np.array(pg.mouse.get_pos()))/10
-			dragMousePosition = pg.mouse.get_pos()
+			mouseOffset = (np.array(self.dragMousePosition) - np.array(pg.mouse.get_pos()))/10
+			self.dragMousePosition = pg.mouse.get_pos()
 			vector = pyrr.Vector3((mouseOffset[1]/20,mouseOffset[0]/20,0))
-			vector = dragRotation.inverse * vector
-			dragRotation *= pyrr.Matrix44.from_y_rotation(vector.y)
-			dragRotation *= pyrr.Matrix44.from_x_rotation(vector.x)
+			vector = self.previewer.tempRotation * vector
+			self.previewer.tempRotation *= pyrr.Matrix44.from_y_rotation(vector.y)
+			self.previewer.tempRotation *= pyrr.Matrix44.from_x_rotation(vector.x)
+
+	def KeyDown(self, event):
+		if event.key == pg.K_LEFT:
+			self.previewer.permaRotation = self.previewer.permaRotation * pyrr.Matrix44.from_y_rotation(-0.2)
+		if event.key == pg.K_RIGHT:
+			self.previewer.permaRotation = self.previewer.permaRotation * pyrr.Matrix44.from_y_rotation(0.2)
+		if event.key == pg.K_UP:
+			self.previewer.permaRotation = pyrr.Matrix44.from_x_rotation(-0.2) * self.previewer.permaRotation
+		if event.key == pg.K_DOWN:
+			self.previewer.permaRotation = pyrr.Matrix44.from_x_rotation(0.2) * self.previewer.permaRotation
+		if event.key == pg.K_KP0:
+			self.previewer.permaRotation = pyrr.Matrix44.from_x_rotation(0)
+
+
 
 
 
@@ -249,15 +310,16 @@ cube = np.array(cube, dtype=np.float32)
 
 
 def pair3(x, y, z):
-    return np.array(np.meshgrid(x,y,z)).T.reshape((-1,))
-
-lin = np.linspace(-1,1,4)
-verts = pair3(lin, lin, lin).astype(dtype=np.float32)
-print(verts)
-print(verts.shape)
-m = ModelPreview()
-m.ShowPoints(verts)
+	t = np.array(np.meshgrid(x,y,z)).T
+	return t.reshape(int(t.size/3),3)
 
 
-
-
+if __name__ == '__main__':
+	lin = np.linspace(-1,1,10)
+	verts = pair3(lin, lin, lin).astype(dtype=np.float32)
+	print(verts.shape)
+	m = ModelPreview()
+	m.start()
+	print(verts)
+	m.ShowPoints(verts, pointSize=1)
+	# m.setRenderMode(ModelPreview.WIREFRAME)

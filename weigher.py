@@ -35,16 +35,17 @@ sc2 = [[],[]]
 
 for i in range(len(sc[0])):
 	chance = dst[sc[1][i]][sc[0][i]]/255
-	if (random.random() < (chance**1.5)*5):
+	if (random.random() < (chance**2)*5):
 		sc2[0].append(sc[0][i])
 		sc2[1].append(sc[1][i])
 		sizes.append(5)
 
 print(time.time() - t)
 
-implt = plt.imshow(rgb)
+implt = plt.imshow(edges)
+#implt = plt.imshow(dst)
 
 
-plt.scatter(x=sc2[0], y=sc2[1], c='r', s=sizes)
+#plt.scatter(x=sc2[0], y=sc2[1], c='r', s=sizes)
 
 plt.show()

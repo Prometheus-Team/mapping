@@ -115,7 +115,7 @@ class SurfaceIdentifier:
 
 # pool = mp.Pool(2)
 s = SurfaceIdentifier()
-img = cv.imread('../testdata/3.png')
+img = cv.imread('../testdata/5.png')
 img = cv.resize(img, (96, 54), interpolation = cv.INTER_AREA)
 # img = cv.resize(img, (192, 108), interpolation = cv.INTER_AREA)
 # img = cv.resize(img, (48, 27), interpolation = cv.INTER_AREA)
