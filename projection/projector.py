@@ -3,7 +3,7 @@ import numpy as np
 from scipy import ndimage
 import cv2 as cv
 import math
-from previewer import ModelPreview
+from previewer import *
 from numpy import genfromtxt
 import pyrr
 
@@ -57,7 +57,7 @@ class Projector:
 		xx, yy = self.worldCoords(width = dx, height = dy)
 		points = self.posFromDepth(self.depth.copy(), xx, yy)
 		points = np.append(points, np.ones((points.shape[0], 1)), axis=1).dot(pyrr.Matrix44.from_x_rotation(np.pi))
-		return points.astype(dtype = np.float32)
+		return points[:,0:3].astype(dtype = np.float32)
 
 
 
@@ -70,6 +70,7 @@ if __name__ == '__main__':
 
 	points = p.getProjectedPoints()
 
+	print(points)
 	m = ModelPreview()
 	m.start()
-	m.ShowPoints(points, pointSize=5)
+	m.addRenderable(Renderable(points, Renderable.POINTS, pointSize=1))

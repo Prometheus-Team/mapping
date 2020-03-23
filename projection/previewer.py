@@ -12,7 +12,11 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 
 class R:
-	previewResolution = (1200,1200)
+	previewResolution = (1000,1000)
+	bgColor = (0.2, 0.2, 0.2)
+	gridColor = (0.3, 0.3, 0.3)
+	gridCount = 40
+	gridSize = 10
 	vertexShaderPath = "shaders/vertex.shader"
 	fragmentShaderPath = "shaders/fragment.shader"
 	autoRotateRate = 0.1
@@ -20,23 +24,81 @@ class R:
 
 class Renderable:
 
-	def __init__(self):
-		pass
-
-class ModelPreview(threading.Thread):
-
 	POINTS = 1
 	WIREFRAME = 2
 	SOLID = 3
 	TEXTURED = 4
 
+	def __init__(self, points, renderMode, indices=None, color=None, pointSize=None, texCoord=None, renderType = None):
+		self.data = np.array([],dtype=np.float32)
+		self.rowlen = 0
+		self.indices = np.array([],dtype=np.int32)
+
+		self.points = np.array([],dtype=np.float32)
+		self.color = np.array([],dtype=np.float32)
+		self.pointSize = np.array([],dtype=np.float32)
+		self.texCoord = np.array([],dtype=np.float32)
+		self.renderMode = renderMode
+		self.renderType = renderType
+
+		self.indiceStart = 0
+		self.buildVertices(points, indices, color, pointSize, texCoord)
+
+	def getRange(self):
+		return ctypes.c_void_p(self.indiceStart * 4), self.indices.shape[0]
+
+	def getRenderType(self):
+		if self.renderType != None:
+			return self.renderType
+		elif self.renderMode == Renderable.POINTS:
+			return GL_POINTS
+		elif self.renderMode == Renderable.WIREFRAME:
+			return GL_LINES
+		else:
+			return GL_POINTS
+
+
+	def buildVertices(self, points, indices=None, color=None, pointSize=None, texCoord=None):
+		rowAmount = points.shape[0]
+
+		if color == None:
+			colors = np.ones((rowAmount, 3)).astype(dtype=np.float32)
+		elif len(color) == 3:
+			colors = np.tile(color, rowAmount).reshape((rowAmount, 3)).astype(dtype=np.float32)
+		else:
+			colors = np.array(color, dtype=np.float32)
+
+		if pointSize == None:
+			pointSizes = np.array(R.defaultPointSize).repeat(rowAmount).reshape((rowAmount,1)).astype(dtype=np.float32)
+		elif type(pointSize) == int:
+			pointSizes = np.array(pointSize).repeat(rowAmount).reshape((rowAmount,1)).astype(dtype=np.float32)
+		else:
+			pointSizes = np.array(pointSize, dtype=np.float32)
+
+		if texCoord == None:
+			texCoords = np.zeros((rowAmount,2)).astype(dtype=np.float32)
+		elif len(texCoord) == 2:
+			texCoords = np.tile(texCoord, rowAmount).reshape((rowAmount, 2)).astype(dtype=np.float32)
+		else:
+			texCoords = np.array(texCoord, dtype=np.float32)
+
+		self.data = np.concatenate((points, colors, texCoords, pointSizes), axis=1)
+		self.rowlen = self.data.shape[1]
+		self.indices = indices
+		if self.indices == None:
+			self.indices = np.linspace(0, self.data.shape[0] - 1, self.data.shape[0], dtype=np.int32)
+
+
+
+
+
+
+class ModelPreview(threading.Thread):
+
 	def __init__(self):
 		threading.Thread.__init__(self)
-		self.renderMode = GL_POINTS
-		self.vertices = np.array([],dtype=np.float32)
+		self.data = np.array([],dtype=np.float32)
 		self.indices = np.array([],dtype=np.int32)
-		self.edgeIndices = np.array([],dtype=np.int32)
-		self.polyIndices = np.array([],dtype=np.int32)
 		self.controller = ModelController(self)
 		self.rowlen = 0
 		self.shader = None
@@ -46,19 +108,36 @@ class ModelPreview(threading.Thread):
 		self.updateBuffersValue = False
 		self.updateAttribsValue = False
 
+		self.renderables = []
+		self.clear()
+
 	def run(self):
 		self.launchPreview()
 		self.startRunning()
 
-	def setRenderMode(self, renderMode):
-		if (renderMode == ModelPreview.POINTS):
-			self.renderMode = GL_POINTS
-			self.indices = np.linspace(0, len(self.vertices)/3 - 1, len(self.vertices)/3, dtype=np.int32)
-		elif renderMode == ModelPreview.WIREFRAME:
-			self.renderMode = GL_LINES
-			if self.edgeIndices != None:
-				self.indices = self.edgeIndices
+	def clear(self):
+		self.renderables = []
+		self.addDefaultRenderables()
 		self.setUpdateBuffers()
+
+	def addRenderable(self, renderable):
+		self.renderables.append(renderable)
+		self.setUpdateBuffers()
+		
+	def addDefaultRenderables(self):
+		self.addGrid()
+
+	def addGrid(self):
+		vlin = np.linspace(-1,1,R.gridCount)
+		hlin = np.array([-1, 1], dtype=np.float32)
+		vy = pair3(hlin, np.zeros(1), vlin).astype(dtype=np.float32)
+		vx = vy.copy()
+		vx[:,2] = vy[:,0]
+		vx[:,0] = vy[:,2]
+		verts = np.concatenate((vx,vy)) * R.gridSize
+
+		self.addRenderable(Renderable(verts, Renderable.WIREFRAME, pointSize=4, color=R.gridColor))
+
 
 	def getShader(self, path):
 		return open(path).read()
@@ -75,17 +154,36 @@ class ModelPreview(threading.Thread):
 
 		glUseProgram(self.shader)
 
-		glClearColor(0.2, 0.2, 0.2, 1.0)
+		glClearColor(R.bgColor[0], R.bgColor[1], R.bgColor[2], 1.0)
 		glEnable(GL_DEPTH_TEST)
 		# glPointSize(1)
 		glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
 		# gluPerspective(45, (display[0]/display[1]), 0.1, 50.0)
 
+	def buildData(self):
+
+		if len(self.renderables) == 0:
+			return
+
+		self.data = self.renderables[0].data
+		self.indices = self.renderables[0].indices
+
+		for i in self.renderables[1:]:
+			self.data = np.concatenate((self.data, i.data))
+			indiceStart = self.indices.shape[0]
+			self.indices = np.concatenate((self.indices, i.indices + indiceStart))
+			i.indiceStart = indiceStart
+
+		self.rowlen = self.data.shape[1]
+		self.data = self.data.reshape((-1,))
+
 	def updateBuffers(self):
+
+		self.buildData()
 
 		VBO = glGenBuffers(1)
 		glBindBuffer(GL_ARRAY_BUFFER, VBO)
-		glBufferData(GL_ARRAY_BUFFER, self.vertices.itemsize * len(self.vertices), self.vertices, GL_STATIC_DRAW)
+		glBufferData(GL_ARRAY_BUFFER, self.data.itemsize * len(self.data), self.data, GL_STATIC_DRAW)
 
 		EBO = glGenBuffers(1)
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO)
@@ -109,19 +207,20 @@ class ModelPreview(threading.Thread):
 
 	def updateAttributes(self):
 		position = glGetAttribLocation(self.shader, 'position')
-		glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, self.vertices.itemsize * self.rowlen, ctypes.c_void_p(0))
+		print("Attrib", self.rowlen)
+		glVertexAttribPointer(position, 3, GL_FLOAT, GL_FALSE, self.data.itemsize * self.rowlen, ctypes.c_void_p(0))
 		glEnableVertexAttribArray(position)
 
-		# color = glGetAttribLocation(self.shader, 'color')
-		# glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, cube.itemsize * 8, ctypes.c_void_p(12))
-		# glEnableVertexAttribArray(color)
+		color = glGetAttribLocation(self.shader, 'color')
+		glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, cube.itemsize * self.rowlen, ctypes.c_void_p(12))
+		glEnableVertexAttribArray(color)
 
 		# texCoords = glGetAttribLocation(self.shader, "InTexCoords")
 		# glVertexAttribPointer(texCoords, 2, GL_FLOAT, GL_FALSE,  cube.itemsize * 8, ctypes.c_void_p(24))
 		# glEnableVertexAttribArray(texCoords)
 
 		pointSize = glGetAttribLocation(self.shader, 'pointSize')
-		glVertexAttribPointer(pointSize, 1, GL_FLOAT, GL_FALSE, cube.itemsize * self.rowlen, ctypes.c_void_p(32))
+		glVertexAttribPointer(pointSize, 1, GL_FLOAT, GL_FALSE, self.data.itemsize * self.rowlen, ctypes.c_void_p(32))
 		glEnableVertexAttribArray(pointSize)
 
 	def startRunning(self):
@@ -144,61 +243,14 @@ class ModelPreview(threading.Thread):
 			transformLoc = glGetUniformLocation(self.shader, "transform")
 			self.autoRotation = pyrr.Matrix44.from_y_rotation(R.autoRotateRate * time.time()/3)
 			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, persp * offset * self.tempRotation * self.permaRotation)
-			glDrawElements(self.renderMode, len(self.indices), GL_UNSIGNED_INT, None)
+			
+			for i in self.renderables:
+				start, count = i.getRange()
+				glDrawElements(i.getRenderType(), count, GL_UNSIGNED_INT, start)
 
 			pg.display.flip()
 			pg.time.wait(10)
 
-
-	def buildVertices(self, points, color=None, pointSize=None, texCoord=None):
-		rowlen = points.shape[0]
-
-		if color == None:
-			colors = np.ones((rowlen, 3)).astype(dtype=np.float32)
-		elif len(color) == 3:
-			colors = np.tile(color, rowlen).reshape((rowlen, 3)).astype(dtype=np.float32)
-		else:
-			colors = color.astype(dtype=np.float32)
-
-		if pointSize == None:
-			pointSizes = np.array(R.defaultPointSize).repeat(rowlen).reshape((rowlen,1)).astype(dtype=np.float32)
-		elif type(pointSize) == int:
-			pointSizes = np.array(pointSize).repeat(rowlen).reshape((rowlen,1)).astype(dtype=np.float32)
-		else:
-			pointSizes = pointSize.astype(dtype=np.float32)
-
-		if texCoord == None:
-			texCoords = np.zeros((rowlen,2)).astype(dtype=np.float32)
-		elif len(texCoord) == 2:
-			texCoords = np.tile(texCoord, rowlen).reshape((rowlen, 2)).astype(dtype=np.float32)
-		else:
-			texCoords = texCoord.astype(dtype=np.float32)
-
-		self.vertices = np.concatenate((points, colors, texCoords, pointSizes), axis=1)
-		self.rowlen = self.vertices.shape[1]
-		# print(self.vertices.shape)
-		self.vertices = self.vertices.reshape((-1,))
-
-
-	def ShowPolies(self, points, polies, color=None, pointSize=None, texCoord=None):
-		self.vertices = np.array(points, dtype=np.float32)
-		self.polyIndices = np.array(polies, dtype=np.int32)
-		self.edgeIndices = self.polyIndices
-		self.indices = self.polyIndices
-		self.setRenderMode(ModelPreview.TEXTURED)
-
-	def ShowEdges(self, points, edges, color=None, pointSize=None, texCoord=None):
-		self.vertices = np.array(points, dtype=np.float32)
-		self.edgeIndices = np.array(edges, dtype=np.int32)
-		self.polyIndices = None
-		self.indices = self.edgeIndices
-		self.setRenderMode(ModelPreview.WIREFRAME)
-
-	def ShowPoints(self, points, color=None, pointSize=None, texCoord=None):
-		self.buildVertices(points, color=color, pointSize=pointSize, texCoord=texCoord)
-		self.edgeIndices = None
-		self.polyIndices = None
-		self.setRenderMode(ModelPreview.POINTS)
 
 	def setUpdateBuffers(self):
 		self.updateBuffersValue = True
@@ -316,6 +368,8 @@ cube = np.array(cube, dtype=np.float32)
 
 # indices = np.array(indices, dtype=np.uint32)
 
+def pair(x, y):
+    return np.array(np.meshgrid(x,y)).T.reshape((-1,2))
 
 def pair3(x, y, z):
 	t = np.array(np.meshgrid(x,y,z)).T
@@ -328,6 +382,5 @@ if __name__ == '__main__':
 	print(verts.shape)
 	m = ModelPreview()
 	m.start()
-	print(verts)
-	m.ShowPoints(verts, pointSize=4)
+	m.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=4))
 	# m.setRenderMode(ModelPreview.WIREFRAME)
