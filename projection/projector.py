@@ -5,6 +5,7 @@ import cv2 as cv
 import math
 from previewer import ModelPreview
 from numpy import genfromtxt
+import pyrr
 
 
 # Image shapes
@@ -13,23 +14,24 @@ height_depth, width_depth = height_rgb // 2, width_rgb // 2
 rgb_width = width_rgb
 rgb_height = height_rgb
 
-# Compute edge magnitudes
-def edges(d):
-	dx = ndimage.sobel(d, 0)  # horizontal derivative
-	dy = ndimage.sobel(d, 1)  # vertical derivative
-	return np.abs(dx) + np.abs(dy)
+dx, dy = 96, 54
+
 
 class Projector:
 
 	def __init__(self):
-		self.rgb = []
-		self.depth = []
+		self.cloudset = None
 
 	def openImage(self, rgb):
 		self.rgb = rgb
 
 	def openDepth(self, depth):
 		self.depth = depth
+
+	def edges(self, d):
+		dx = ndimage.sobel(d, 0)
+		dy = ndimage.sobel(d, 1)
+		return np.abs(dx) + np.abs(dy)
 
 	def worldCoords(self, width, height):
 		hfov_degrees, vfov_degrees = 57, 43
@@ -46,34 +48,28 @@ class Projector:
 	def posFromDepth(self, depth, xx, yy):
 		length = depth.shape[0] * depth.shape[1]
 
-		#depth[edges(depth) > 0.3] = 1e6  # Hide depth edges       
+		depth[self.edges(depth) > 0.9] = 1e6  # Hide depth edges       
 		z = depth.reshape(length)
 
 		return np.dstack((xx*z, yy*z, z)).reshape((length, 3))
 
-	def getDepth(self):
-		xx, yy = self.worldCoords(width=rgb_width//2, height=rgb_height//2)
+	def getProjectedPoints(self):
+		xx, yy = self.worldCoords(width = dx, height = dy)
 		points = self.posFromDepth(self.depth.copy(), xx, yy)
-		return points
+		points = np.append(points, np.ones((points.shape[0], 1)), axis=1).dot(pyrr.Matrix44.from_x_rotation(np.pi))
+		return points.astype(dtype = np.float32)
 
 
-img = cv.imread('../testdata/ClippedDepthNormal.png')
-img = cv.resize(img, (640, 480), interpolation = cv.INTER_AREA)
-rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
-img = cv.imread('../testdata/ClippedDepthZ.png')
-img = cv.resize(img, (320, 240), interpolation = cv.INTER_AREA)
-depth = cv.cvtColor(img, cv.COLOR_BGR2RGB)[:,:,0]
-depth = depth.astype(dtype=np.float32)/25555
 
-depth = genfromtxt('../testdata/depth2.csv', delimiter=',')
+if __name__ == '__main__':
+	depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
+	depth = cv.resize(depth, (dx, dy), interpolation = cv.INTER_AREA)
 
-print("Depth")
-print(depth)
-p = Projector()
-p.openDepth(depth)
-points = p.getDepth().astype(dtype=np.float32)
-print(points.shape)
-print(points[90:100])
-m = ModelPreview()
-m.start()
-m.ShowPoints(points, pointSize=5)
+	p = Projector()
+	p.openDepth(depth)
+
+	points = p.getProjectedPoints()
+
+	m = ModelPreview()
+	m.start()
+	m.ShowPoints(points, pointSize=5)

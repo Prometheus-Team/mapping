@@ -18,6 +18,10 @@ class R:
 	autoRotateRate = 0.1
 	defaultPointSize = 1
 
+class Renderable:
+
+	def __init__(self):
+		pass
 
 class ModelPreview(threading.Thread):
 
@@ -73,8 +77,8 @@ class ModelPreview(threading.Thread):
 
 		glClearColor(0.2, 0.2, 0.2, 1.0)
 		glEnable(GL_DEPTH_TEST)
-		glPointSize(1)
-		# glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
+		# glPointSize(1)
+		glEnable(GL_VERTEX_PROGRAM_POINT_SIZE)
 		# gluPerspective(45, (display[0]/display[1]), 0.1, 50.0)
 
 	def updateBuffers(self):
@@ -116,6 +120,10 @@ class ModelPreview(threading.Thread):
 		# glVertexAttribPointer(texCoords, 2, GL_FLOAT, GL_FALSE,  cube.itemsize * 8, ctypes.c_void_p(24))
 		# glEnableVertexAttribArray(texCoords)
 
+		pointSize = glGetAttribLocation(self.shader, 'pointSize')
+		glVertexAttribPointer(pointSize, 1, GL_FLOAT, GL_FALSE, cube.itemsize * self.rowlen, ctypes.c_void_p(32))
+		glEnableVertexAttribArray(pointSize)
+
 	def startRunning(self):
 		self.runPreview()
 
@@ -131,7 +139,7 @@ class ModelPreview(threading.Thread):
 			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 
 			persp = pyrr.Matrix44.perspective_projection(45, 1, 0.1, 100)
-			offset = pyrr.Matrix44.from_translation((0,0,-5)) * pyrr.Matrix44.from_x_rotation(np.pi/-6)# * pyrr.Matrix44.from_y_rotation(np.pi/6)
+			offset = pyrr.Matrix44.from_translation((0,0,-5))# * pyrr.Matrix44.from_x_rotation(np.pi/-6)# * pyrr.Matrix44.from_y_rotation(np.pi/6)
 
 			transformLoc = glGetUniformLocation(self.shader, "transform")
 			self.autoRotation = pyrr.Matrix44.from_y_rotation(R.autoRotateRate * time.time()/3)
@@ -166,7 +174,7 @@ class ModelPreview(threading.Thread):
 		else:
 			texCoords = texCoord.astype(dtype=np.float32)
 
-		self.vertices = np.concatenate((points, colors, pointSizes, texCoords), axis=1)
+		self.vertices = np.concatenate((points, colors, texCoords, pointSizes), axis=1)
 		self.rowlen = self.vertices.shape[1]
 		# print(self.vertices.shape)
 		self.vertices = self.vertices.reshape((-1,))
@@ -321,5 +329,5 @@ if __name__ == '__main__':
 	m = ModelPreview()
 	m.start()
 	print(verts)
-	m.ShowPoints(verts, pointSize=1)
+	m.ShowPoints(verts, pointSize=4)
 	# m.setRenderMode(ModelPreview.WIREFRAME)

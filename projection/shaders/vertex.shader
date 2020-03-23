@@ -3,6 +3,7 @@
 in vec3 position;
 in vec3 color;
 in vec2 InTexCoords;
+in float pointSize;
 
 out vec3 newColor;
 out vec2 OutTexCoords;
@@ -14,7 +15,7 @@ void main() {
 	gl_Position = transform * vec4(position, 1.0f);
 	newColor = color;
 	OutTexCoords = InTexCoords;
-	//gl_PointSize = (position.x + position.y + position.z + 1)*10;
+	gl_PointSize = pointSize;
 
 }
 
