@@ -19,9 +19,10 @@ class R:
 	gridColor = (0.3, 0.3, 0.3)
 	gridCount = 41
 	gridSize = 10
+	axisTipSize = 5
 	xColor = (0.8,0,0)
 	yColor = (0,0.9,0)
-	zColor = (0,0.1,0.9)
+	zColor = (0.2,0.4,1)
 	vertexShaderPath = "shaders/vertex.shader"
 	fragmentShaderPath = "shaders/fragment.shader"
 	autoRotateRate = 0.1
@@ -46,6 +47,7 @@ class Renderable:
 		self.renderMode = renderMode
 		self.renderType = renderType
 
+		self.currentPreviewer = None
 		self.indiceStart = 0
 		self.buildVertices(points, indices, color, pointSize, texCoord)
 
@@ -62,40 +64,62 @@ class Renderable:
 		else:
 			return GL_POINTS
 
-
-	def buildVertices(self, points, indices=None, color=None, pointSize=None, texCoord=None):
-		rowAmount = points.shape[0]
+	def getColorArray(self, color, rowAmount):
 
 		if type(color) == type(None):
 			colors = np.ones((rowAmount, 3)).astype(dtype=np.float32)
 		elif len(color) == 3:
 			colors = np.tile(color, rowAmount).reshape((rowAmount, 3)).astype(dtype=np.float32)
 		else:
-			colors = np.array(color, dtype=np.float32)
+			colors = np.array(color, dtype=np.float32).reshape((rowAmount, 3))
+
+		return colors
+
+	def getPointSizeArray(self, pointSize, rowAmount):
 
 		if type(pointSize) == type(None):
 			pointSizes = np.array(R.defaultPointSize).repeat(rowAmount).reshape((rowAmount,1)).astype(dtype=np.float32)
 		elif type(pointSize) == int:
 			pointSizes = np.array(pointSize).repeat(rowAmount).reshape((rowAmount,1)).astype(dtype=np.float32)
 		else:
-			pointSizes = np.array(pointSize, dtype=np.float32)
+			pointSizes = np.array(pointSize, dtype=np.float32).reshape((rowAmount, 1))
+
+		return pointSizes
+
+	def getTexCoordArray(self, texCoord, rowAmount):
 
 		if type(texCoord) == type(None):
 			texCoords = np.zeros((rowAmount,2)).astype(dtype=np.float32)
 		elif len(texCoord) == 2:
 			texCoords = np.tile(texCoord, rowAmount).reshape((rowAmount, 2)).astype(dtype=np.float32)
 		else:
-			texCoords = np.array(texCoord, dtype=np.float32)
+			texCoords = np.array(texCoord, dtype=np.float32).reshape((rowAmount, 2))
+
+		return texCoords		
+
+	def buildVertices(self, points, indices=None, color=None, pointSize=None, texCoord=None):
+		points = points.reshape((-1,3)).astype(dtype=np.float32)
+		rowAmount = points.shape[0]
+
+		colors = self.getColorArray(color, rowAmount)
+		pointSizes = self.getPointSizeArray(pointSize, rowAmount)
+		texCoords = self.getTexCoordArray(texCoord, rowAmount)
 
 		self.data = np.concatenate((points, colors, texCoords, pointSizes), axis=1)
 		self.rowlen = self.data.shape[1]
 		self.indices = indices
-		if self.indices == None:
+		if type(self.indices) == type(None):
 			self.indices = np.linspace(0, self.data.shape[0] - 1, self.data.shape[0], dtype=np.int32)
+		self.indices = self.indices.reshape((-1,)).astype(dtype=np.int32)
 
 
+	def updateColors(self, color):
 
+		colors = self.getColorArray(color, rowAmount)
+		self.data[:, 3:6] = colors
 
+		if currentPreviewer != None:
+			currentPreviewer.setUpdateBuffers()
 
 
 class ModelPreview(threading.Thread):
@@ -128,11 +152,14 @@ class ModelPreview(threading.Thread):
 
 	def addRenderable(self, renderable):
 		self.renderables.append(renderable)
+		renderable.currentPreviewer = self
 		self.setUpdateBuffers()
 		
 	def addDefaultRenderables(self):
+		self.addAxesTips()
 		self.addAxes()
 		self.addGrid()
+		self.addCamera()
 
 	def addGrid(self):
 		vlin = np.linspace(-1,1,R.gridCount)
@@ -146,10 +173,10 @@ class ModelPreview(threading.Thread):
 		self.addRenderable(Renderable(verts, Renderable.WIREFRAME, pointSize=4, color=R.gridColor))
 
 	def addCamera(self):
-		verts = np.array([[0,0,0],[0,1,1],[0,1,-1],[0,-1,-1],[0,-1,1]], dtype=np.float32)
+		verts = np.array([[0,0,0],[1,1,1],[1,1,-1],[1,-1,-1],[1,-1,1]], dtype=np.float32)
 		inds = np.array([[0,1,2,0,2,3,0,3,4,0,4,1,0]], dtype=np.int32)
 
-		self.addRenderable(Renderable(vert))
+		self.addRenderable(Renderable(verts, Renderable.WIREFRAME, indices=inds, renderType=GL_LINE_STRIP))
 
 	def addAxes(self):
 		length = R.gridSize;
@@ -157,6 +184,13 @@ class ModelPreview(threading.Thread):
 		col = np.array([R.zColor,R.zColor,R.xColor,R.xColor], dtype=np.float32)
 
 		self.addRenderable(Renderable(verts, Renderable.WIREFRAME, color=col))
+
+	def addAxesTips(self):
+		length = R.gridSize;
+		verts = np.array([[0,0,length],[length,0,0]], dtype=np.float32)
+		col = np.array([R.zColor,R.xColor], dtype=np.float32)
+
+		self.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=R.axisTipSize,color=col))
 
 
 	def getShader(self, path):
