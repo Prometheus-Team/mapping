@@ -5,7 +5,6 @@ import time
 import random
 import cv2 as cv
 
-
 def diff(x1, x2):
 	xout = x2 - x1
 	xout[3] = 1.0
@@ -14,7 +13,7 @@ def diff(x1, x2):
 def pair(img1, img2):
 	return np.concatenate((img1, img2), 1)
 
-img = cv.imread('testdata/ClippedDepthNormal.png')
+img = cv.imread('testdata/ClippedDepthNormal.png',0)
 rgb = cv.cvtColor(img, cv.COLOR_BGR2RGB)
 print(rgb.shape)
 dx = np.ndarray(img.shape)
@@ -42,8 +41,8 @@ for i in range(len(sc[0])):
 
 print(time.time() - t)
 
-implt = plt.imshow(edges)
-#implt = plt.imshow(dst)
+# implt = plt.imshow(edges)
+implt = plt.imshow(dst)
 
 
 #plt.scatter(x=sc2[0], y=sc2[1], c='r', s=sizes)

@@ -48,7 +48,8 @@ class Projector:
 	def posFromDepth(self, depth, xx, yy):
 		length = depth.shape[0] * depth.shape[1]
 
-		depth[self.edges(depth) > 0.9] = 1e6  # Hide depth edges       
+		#depth[self.edges(depth) > 0.99] = 1e6  # Hide depth edges  
+		depth[self.edges(depth) > 1] = 0
 		z = depth.reshape(length)
 
 		return np.dstack((xx*z, yy*z, z)).reshape((length, 3))
@@ -56,13 +57,12 @@ class Projector:
 	def getProjectedPoints(self):
 		xx, yy = self.worldCoords(width = dx, height = dy)
 		points = self.posFromDepth(self.depth.copy(), xx, yy)
-		points = np.append(points, np.ones((points.shape[0], 1)), axis=1).dot(pyrr.Matrix44.from_x_rotation(np.pi))
-		return points[:,0:3].astype(dtype = np.float32)
-
+		points = np.append(points, np.ones((points.shape[0], 1)), axis=1).dot(pyrr.Matrix44.from_x_rotation(np.pi))[:,0:3]
+		return points.astype(dtype = np.float32)
 
 
 if __name__ == '__main__':
-	depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
+	depth = genfromtxt('../testdata/depth2.csv', delimiter=',')
 	depth = cv.resize(depth, (dx, dy), interpolation = cv.INTER_AREA)
 
 	p = Projector()

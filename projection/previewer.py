@@ -11,12 +11,17 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
+from util import *
+
 class R:
 	previewResolution = (1000,1000)
 	bgColor = (0.2, 0.2, 0.2)
 	gridColor = (0.3, 0.3, 0.3)
-	gridCount = 40
+	gridCount = 41
 	gridSize = 10
+	xColor = (0.8,0,0)
+	yColor = (0,0.9,0)
+	zColor = (0,0.1,0.9)
 	vertexShaderPath = "shaders/vertex.shader"
 	fragmentShaderPath = "shaders/fragment.shader"
 	autoRotateRate = 0.1
@@ -61,21 +66,21 @@ class Renderable:
 	def buildVertices(self, points, indices=None, color=None, pointSize=None, texCoord=None):
 		rowAmount = points.shape[0]
 
-		if color == None:
+		if type(color) == type(None):
 			colors = np.ones((rowAmount, 3)).astype(dtype=np.float32)
 		elif len(color) == 3:
 			colors = np.tile(color, rowAmount).reshape((rowAmount, 3)).astype(dtype=np.float32)
 		else:
 			colors = np.array(color, dtype=np.float32)
 
-		if pointSize == None:
+		if type(pointSize) == type(None):
 			pointSizes = np.array(R.defaultPointSize).repeat(rowAmount).reshape((rowAmount,1)).astype(dtype=np.float32)
 		elif type(pointSize) == int:
 			pointSizes = np.array(pointSize).repeat(rowAmount).reshape((rowAmount,1)).astype(dtype=np.float32)
 		else:
 			pointSizes = np.array(pointSize, dtype=np.float32)
 
-		if texCoord == None:
+		if type(texCoord) == type(None):
 			texCoords = np.zeros((rowAmount,2)).astype(dtype=np.float32)
 		elif len(texCoord) == 2:
 			texCoords = np.tile(texCoord, rowAmount).reshape((rowAmount, 2)).astype(dtype=np.float32)
@@ -105,6 +110,7 @@ class ModelPreview(threading.Thread):
 		self.permaRotation = pyrr.Matrix44.from_x_rotation(0)
 		self.tempRotation = pyrr.Matrix44.from_x_rotation(0)
 		self.autoRotation = pyrr.Matrix44.from_x_rotation(0)
+		self.offset = pyrr.Matrix44.from_translation((0,0,-5))# * pyrr.Matrix44.from_x_rotation(np.pi/-6)# * pyrr.Matrix44.from_y_rotation(np.pi/6)
 		self.updateBuffersValue = False
 		self.updateAttribsValue = False
 
@@ -125,6 +131,7 @@ class ModelPreview(threading.Thread):
 		self.setUpdateBuffers()
 		
 	def addDefaultRenderables(self):
+		self.addAxes()
 		self.addGrid()
 
 	def addGrid(self):
@@ -137,6 +144,19 @@ class ModelPreview(threading.Thread):
 		verts = np.concatenate((vx,vy)) * R.gridSize
 
 		self.addRenderable(Renderable(verts, Renderable.WIREFRAME, pointSize=4, color=R.gridColor))
+
+	def addCamera(self):
+		verts = np.array([[0,0,0],[0,1,1],[0,1,-1],[0,-1,-1],[0,-1,1]], dtype=np.float32)
+		inds = np.array([[0,1,2,0,2,3,0,3,4,0,4,1,0]], dtype=np.int32)
+
+		self.addRenderable(Renderable(vert))
+
+	def addAxes(self):
+		length = R.gridSize;
+		verts = np.array([[0,0,-length],[0,0,length],[length,0,0],[-length,0,0]], dtype=np.float32)
+		col = np.array([R.zColor,R.zColor,R.xColor,R.xColor], dtype=np.float32)
+
+		self.addRenderable(Renderable(verts, Renderable.WIREFRAME, color=col))
 
 
 	def getShader(self, path):
@@ -212,11 +232,11 @@ class ModelPreview(threading.Thread):
 		glEnableVertexAttribArray(position)
 
 		color = glGetAttribLocation(self.shader, 'color')
-		glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, cube.itemsize * self.rowlen, ctypes.c_void_p(12))
+		glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, self.data.itemsize * self.rowlen, ctypes.c_void_p(12))
 		glEnableVertexAttribArray(color)
 
 		# texCoords = glGetAttribLocation(self.shader, "InTexCoords")
-		# glVertexAttribPointer(texCoords, 2, GL_FLOAT, GL_FALSE,  cube.itemsize * 8, ctypes.c_void_p(24))
+		# glVertexAttribPointer(texCoords, 2, GL_FLOAT, GL_FALSE,  self.data.itemsize * 8, ctypes.c_void_p(24))
 		# glEnableVertexAttribArray(texCoords)
 
 		pointSize = glGetAttribLocation(self.shader, 'pointSize')
@@ -238,11 +258,10 @@ class ModelPreview(threading.Thread):
 			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 
 			persp = pyrr.Matrix44.perspective_projection(45, 1, 0.1, 100)
-			offset = pyrr.Matrix44.from_translation((0,0,-5))# * pyrr.Matrix44.from_x_rotation(np.pi/-6)# * pyrr.Matrix44.from_y_rotation(np.pi/6)
 
 			transformLoc = glGetUniformLocation(self.shader, "transform")
 			self.autoRotation = pyrr.Matrix44.from_y_rotation(R.autoRotateRate * time.time()/3)
-			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, persp * offset * self.tempRotation * self.permaRotation)
+			glUniformMatrix4fv(transformLoc, 1, GL_FALSE, persp * self.offset * self.tempRotation * self.permaRotation)
 			
 			for i in self.renderables:
 				start, count = i.getRange()
@@ -290,6 +309,11 @@ class ModelController:
 		self.dragging = True
 		self.dragMousePosition = pg.mouse.get_pos()
 
+		if (event.button == 4):
+			self.previewer.offset = pyrr.Matrix44.from_translation((0,0,1)) * self.previewer.offset
+		elif (event.button == 5):
+			self.previewer.offset = pyrr.Matrix44.from_translation((0,0,-1)) * self.previewer.offset		
+
 	def MouseMove(self, event):
 		if self.dragging:
 			mouseOffset = (np.array(self.dragMousePosition) - np.array(pg.mouse.get_pos()))/10
@@ -310,77 +334,15 @@ class ModelController:
 			self.previewer.permaRotation = pyrr.Matrix44.from_x_rotation(0.2) * self.previewer.permaRotation
 		if event.key == pg.K_KP0:
 			self.previewer.permaRotation = pyrr.Matrix44.from_x_rotation(0)
-
-
-
-
-
-# cube = [-0.5, -0.5, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
-#         0.5, -0.5, 0.5, 0.0, 1.0, 0.0, 1.0, 0.0,
-#         0.5, 0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 1.0,
-#         -0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.0, 1.0,
-
-#         -0.5, -0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
-#         0.5, -0.5, -0.5, 0.0, 1.0, 0.0, 1.0, 0.0,
-#         0.5, 0.5, -0.5, 0.0, 0.0, 1.0, 1.0, 1.0,
-#         -0.5, 0.5, -0.5, 1.0, 1.0, 1.0, 0.0, 1.0,
-
-#         0.5, -0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
-#         0.5, 0.5, -0.5, 0.0, 1.0, 0.0, 1.0, 0.0,
-#         0.5, 0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 1.0,
-#         0.5, -0.5, 0.5, 1.0, 1.0, 1.0, 0.0, 1.0,
-
-#         -0.5, 0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
-#         -0.5, -0.5, -0.5, 0.0, 1.0, 0.0, 1.0, 0.0,
-#         -0.5, -0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 1.0,
-#         -0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.0, 1.0,
-
-#         -0.5, -0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
-#         0.5, -0.5, -0.5, 0.0, 1.0, 0.0, 1.0, 0.0,
-#         0.5, -0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 1.0,
-#         -0.5, -0.5, 0.5, 1.0, 1.0, 1.0, 0.0, 1.0,
-
-#         0.5, 0.5, -0.5, 1.0, 0.0, 0.0, 0.0, 0.0,
-#         -0.5, 0.5, -0.5, 0.0, 1.0, 0.0, 1.0, 0.0,
-#         -0.5, 0.5, 0.5, 0.0, 0.0, 1.0, 1.0, 1.0,
-#         0.5, 0.5, 0.5, 1.0, 1.0, 1.0, 0.0, 1.0]
-
-# cube = np.array(cube, dtype=np.float32)
-
-cube = [-0.5, -0.5, 0.5,
-        0.5, -0.5, 0.5,
-        0.5, 0.5, 0.5,
-        -0.5, 0.5, 0.5,
-
-        -0.5, -0.5, -0.5,
-        0.5, -0.5, -0.5,
-        0.5, 0.5, -0.5,
-        -0.5, 0.5, -0.5]
-
-cube = np.array(cube, dtype=np.float32)
-
-# indices = [0, 1, 2, 2, 3, 0,
-#            4, 5, 6, 6, 7, 4,
-#            8, 9, 10, 10, 11, 8,
-#            12, 13, 14, 14, 15, 12,
-#            16, 17, 18, 18, 19, 16,
-#            20, 21, 22, 22, 23, 20]
-
-# indices = np.array(indices, dtype=np.uint32)
-
-def pair(x, y):
-    return np.array(np.meshgrid(x,y)).T.reshape((-1,2))
-
-def pair3(x, y, z):
-	t = np.array(np.meshgrid(x,y,z)).T
-	return t.reshape(int(t.size/3),3)
+		if event.key == pg.K_KP_MINUS:
+			self.previewer.offset = pyrr.Matrix44.from_translation((0,0,-3)) * self.previewer.offset
+		if event.key == pg.K_KP_PLUS:
+			self.previewer.offset = pyrr.Matrix44.from_translation((0,0,3)) * self.previewer.offset
 
 
 if __name__ == '__main__':
-	lin = np.linspace(-1,1,10)
-	verts = pair3(lin, lin, lin).astype(dtype=np.float32)
-	print(verts.shape)
+	verts = cube(10)
 	m = ModelPreview()
 	m.start()
-	m.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=4))
+	m.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=4, color=(.6,.9,1)))
 	# m.setRenderMode(ModelPreview.WIREFRAME)

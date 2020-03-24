@@ -5,6 +5,7 @@ import numpy as np
 class CloudSet:
 
 	def __init__(self):
+		self.
 		self.clouds = 
 
 
@@ -16,7 +17,9 @@ class Cloud:
 		self.surface = np.array()
 		self.edge = np.array()
 		self.internal = np.array()
+		self.normals = np.array()
+		self.normalDifference = np.array()
 		self.points = np.array()
 
-	def 
+
 
