@@ -3,6 +3,7 @@ import numpy as np
 import OpenGL.GL.shaders
 import pyrr
 import time
+import math
 import threading
 
 from PIL import Image
@@ -17,7 +18,7 @@ class R:
 	previewResolution = (1000,1000)
 	bgColor = (0.2, 0.2, 0.2)
 	gridColor = (0.3, 0.3, 0.3)
-	gridCount = 41
+	gridCount = 21
 	gridSize = 10
 	axisTipSize = 5
 	xColor = (0.8,0,0)
@@ -49,6 +50,7 @@ class Renderable:
 
 		self.currentPreviewer = None
 		self.indiceStart = 0
+		self.dataStart = 0
 		self.buildVertices(points, indices, color, pointSize, texCoord)
 
 	def getRange(self):
@@ -64,8 +66,10 @@ class Renderable:
 		else:
 			return GL_POINTS
 
-	def getColorArray(self, color, rowAmount):
+	def getPointsArray(self, points):
+		return points.reshape((-1,3)).astype(dtype=np.float32)
 
+	def getColorArray(self, color, rowAmount):
 		if type(color) == type(None):
 			colors = np.ones((rowAmount, 3)).astype(dtype=np.float32)
 		elif len(color) == 3:
@@ -76,7 +80,6 @@ class Renderable:
 		return colors
 
 	def getPointSizeArray(self, pointSize, rowAmount):
-
 		if type(pointSize) == type(None):
 			pointSizes = np.array(R.defaultPointSize).repeat(rowAmount).reshape((rowAmount,1)).astype(dtype=np.float32)
 		elif type(pointSize) == int:
@@ -98,7 +101,7 @@ class Renderable:
 		return texCoords		
 
 	def buildVertices(self, points, indices=None, color=None, pointSize=None, texCoord=None):
-		points = points.reshape((-1,3)).astype(dtype=np.float32)
+		points = self.getPointsArray(points)
 		rowAmount = points.shape[0]
 
 		colors = self.getColorArray(color, rowAmount)
@@ -111,15 +114,74 @@ class Renderable:
 		if type(self.indices) == type(None):
 			self.indices = np.linspace(0, self.data.shape[0] - 1, self.data.shape[0], dtype=np.int32)
 		self.indices = self.indices.reshape((-1,)).astype(dtype=np.int32)
-
+		
+		if len(self.indices) % 2 != 0:
+			self.indices = np.append(self.indices, self.indices[-1])
 
 	def updateColors(self, color):
-
 		colors = self.getColorArray(color, rowAmount)
 		self.data[:, 3:6] = colors
 
 		if currentPreviewer != None:
 			currentPreviewer.setUpdateBuffers()
+
+	def updatePoints(self, points):
+		points = self.getPointsArray(points)
+		self.data[:, 0:3] = points
+
+		if currentPreviewer != None:
+			currentPreviewer.setUpdateBuffers()
+
+
+
+
+class Camera:
+
+	def __init__(self, hfovd, vfovd, matrix = None):
+		self.focal = 1
+		self.x = math.tan(math.radians(hfovd/2)) * self.focal
+		self.y = math.tan(math.radians(vfovd/2)) * self.focal
+		self.matrix = matrix
+		self.renderable = None
+		self.previewer = None
+		self.buildCamera()
+
+	def buildCamera(self):
+		verts = np.array([[0,0,0],[self.focal,self.y,self.x],[self.focal,self.y,-self.x],[self.focal,-self.y,-self.x],[self.focal,-self.y,self.x]], dtype=np.float32)/2
+		inds = np.array([0,1,2,0,2,3,0,3,4,0,4,1,0], dtype=np.int32)
+
+		if self.matrix is not None:
+			verts = transform(verts, self.matrix)
+
+		if self.previewer is not None:
+			self.previewer.removeRenderable(self.renderable)
+
+		self.renderable = Renderable(verts, Renderable.WIREFRAME, indices=inds, renderType=GL_LINE_STRIP, color=(0.8, 0.6, 0.3))
+
+		if self.previewer is not None:
+			self.previewer.addRenderable(self.renderable)
+
+
+	def transform(self, matrix):
+		self.matrix = matrix
+		self.buildCamera()
+
+class RenderUtil:
+
+	def getBounds(points):
+		minBound, maxBound = bounds(points)
+		print("Min and max", minBound, maxBound)
+		boundPointsMask = pair3((0,1),(0,1),(0,1))
+		boundPoints = np.where(boundPointsMask == 0, minBound, maxBound)
+
+		indices = []
+		for i in range(boundPointsMask.shape[0]):
+			for j in range(i):
+				if np.sum(np.abs(boundPointsMask[i] - boundPointsMask[j])) == 1:
+					indices.append((i,j))
+		indices = np.array(indices, dtype=np.int32)
+
+		return boundPoints, indices
 
 
 class ModelPreview(threading.Thread):
@@ -150,16 +212,24 @@ class ModelPreview(threading.Thread):
 		self.addDefaultRenderables()
 		self.setUpdateBuffers()
 
+	def addRenderables(self, renderables):
+		for i in renderables:
+			self.addRenderable(i)
+
 	def addRenderable(self, renderable):
 		self.renderables.append(renderable)
 		renderable.currentPreviewer = self
+		self.setUpdateBuffers()
+
+
+	def removeRenderable(self, renderable):
+		self.renderables.remove(renderable)
 		self.setUpdateBuffers()
 		
 	def addDefaultRenderables(self):
 		self.addAxesTips()
 		self.addAxes()
 		self.addGrid()
-		self.addCamera()
 
 	def addGrid(self):
 		vlin = np.linspace(-1,1,R.gridCount)
@@ -172,11 +242,9 @@ class ModelPreview(threading.Thread):
 
 		self.addRenderable(Renderable(verts, Renderable.WIREFRAME, pointSize=4, color=R.gridColor))
 
-	def addCamera(self):
-		verts = np.array([[0,0,0],[1,1,1],[1,1,-1],[1,-1,-1],[1,-1,1]], dtype=np.float32)
-		inds = np.array([[0,1,2,0,2,3,0,3,4,0,4,1,0]], dtype=np.int32)
-
-		self.addRenderable(Renderable(verts, Renderable.WIREFRAME, indices=inds, renderType=GL_LINE_STRIP))
+	def addCamera(self, camera):
+		camera.previewer = self
+		self.addRenderable(camera.renderable)
 
 	def addAxes(self):
 		length = R.gridSize;
@@ -223,10 +291,12 @@ class ModelPreview(threading.Thread):
 		self.indices = self.renderables[0].indices
 
 		for i in self.renderables[1:]:
+			dataStart = self.data.shape[0]
 			self.data = np.concatenate((self.data, i.data))
 			indiceStart = self.indices.shape[0]
-			self.indices = np.concatenate((self.indices, i.indices + indiceStart))
+			self.indices = np.concatenate((self.indices, i.indices + dataStart))
 			i.indiceStart = indiceStart
+			i.dataStart = dataStart
 
 		self.rowlen = self.data.shape[1]
 		self.data = self.data.reshape((-1,))
@@ -375,8 +445,8 @@ class ModelController:
 
 
 if __name__ == '__main__':
-	verts = cube(10)
+	verts = cube(32)
 	m = ModelPreview()
 	m.start()
-	m.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=4, color=(.6,.9,1)))
+	m.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=1, color=(.6,.9,1)))
 	# m.setRenderMode(ModelPreview.WIREFRAME)

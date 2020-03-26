@@ -7,7 +7,10 @@ from previewer import *
 from numpy import genfromtxt
 import pyrr
 
+from normalestimator import NormalEstimator
+
 class Projector:
+
 
 	def __init__(self):
 		self.cloudset = None
@@ -16,12 +19,23 @@ class Projector:
 		self.dx, self.dy = 35, 20
 		self.hfovd, self.vfovd = 57, 43
 		self.slantThreshold = 4
+		self.slantSeparation = 1e6
+		self.separationThreshold = 1e3
+
+		self.xx, self.yy = None, None
 
 	def openImage(self, rgb):
 		self.rgb = rgb
 
 	def openDepth(self, depth):
 		self.depth = cv.resize(depth, (self.dx, self.dy), interpolation = cv.INTER_AREA)
+		self.worldCoords(self.dx, self.dy)
+
+	def projectDepth(self, cameraTransform):
+		points = self.getProjectedPoints(cameraTransform)
+		normals = NormalEstimator.getEstimatedNormals(points)
+		points, normals = self.clean(points, normals)
+		return points, normals
 
 	def edges(self, d):
 		dx = ndimage.sobel(d, 0)
@@ -35,86 +49,64 @@ class Projector:
 		fx = width/(2*math.tan(hFov/2))
 		fy = height/(2*math.tan(vFov/2))
 		xx, yy = np.tile(range(width), height), np.repeat(range(height), width)
-		xx = (xx-cx)/fx
-		yy = (yy-cy)/fy
-		return xx, yy
+		xx = ((xx + 0.5)-cx)/fx
+		yy = ((yy + 0.5)-cy)/fy
+		self.xx, self.yy = xx, yy
 
-	def posFromDepth(self, depth, xx, yy):
-		length = depth.shape[0] * depth.shape[1]
-
-		#depth[self.edges(depth) > 0.99] = 1e6  # Hide depth edges  
-		depth[self.edges(depth) > self.slantThreshold] = 1e6
-		z = depth.reshape(length)
-
-		return np.dstack((xx*z, yy*z, z)).reshape((length, 3))
-
-	def getEstimatedNormals(self, points):
-		infinitum = (1e6, 1e6, 1e6)
-		infinitumThreshold = 1e3
-
-		#shift points right, left, down, up
-		rollr = np.roll(points, 1, axis=1)
-		rollr[:,0] = infinitum
-
-		rolll = np.roll(points, -1, axis=1)
-		rolll[:,-1] = infinitum
-
-		rolld = np.roll(points, 1, axis=0)
-		rolld[0,:] = infinitum
-
-		rollu = np.roll(points, -1, axis=0)
-		rollu[-1,:] = infinitum
-
-		#find the differences
-		diffr = rollr - points
-		diffl = rolll - points
-		diffu = rollu - points
-		diffd = rolld - points
-
-		#cross product differences to find normals
-		crossrd = np.cross(diffr, diffd)
-		crosslu = np.cross(diffl, diffu)
-
-		#average the two normals
-		normals = normalize(crosslu + crossrd)
-
-		#set border normals to zero
-		normals[np.sum((np.abs(diffr), np.abs(diffl), np.abs(diffu), np.abs(diffd)), axis=0) > infinitumThreshold] = 0
-
-
-		return normals
-
-
-	def getProjectedPoints(self):
-		xx, yy = self.worldCoords(self.dx, self.dy)
-		points = self.posFromDepth(self.depth.copy(), xx, yy)
-		points = transform(points, pyrr.Matrix44.from_x_rotation(np.pi))
+	def getProjectedPoints(self, cameraTransform):
+		points = self.posFromDepth(self.depth.copy())
+		points = rotate(points, (0,-90,180))
+		points = transform(points, cameraTransform)
 		return points.astype(dtype = np.float32).reshape((self.dy, self.dx, 3))
 
+	def posFromDepth(self, depth):
+		length = depth.shape[0] * depth.shape[1]
+
+		depth[self.edges(depth) > self.slantThreshold] = self.slantSeparation
+		z = depth.reshape(length);
+
+		return np.dstack((self.xx * z, self.yy * z, z)).reshape((length, 3))
+
+	def clean(self, points, normals):
+		points[np.abs(points) > self.separationThreshold] = np.nan
+		points = points.reshape((-1,3))
+		normals = normals.reshape((-1,3))
+
+		condition = np.logical_not(np.any(np.isnan(points), axis=1))
+		points = points[condition]
+		normals = normals[condition]
+
+		return points, normals
 
 
-
-
+	def getBounds(self, points, bubbleResolution):
+		#extent = bubbleResolution//2
+		points[np.abs(points) > self.separationThreshold] = np.nan
+		maxBound = np.nanmax(np.nanmax(points, axis = 1), axis = 0)
+		minBound = np.nanmin(np.nanmin(points, axis = 1), axis = 0)# - extent
+		return (minBound, maxBound)
 
 
 if __name__ == '__main__':
 	depth = genfromtxt('../testdata/depth2.csv', delimiter=',')
+	cameraTransform = matrixTR((1,2,0),(0,50,40))
 
 	p = Projector()
 	p.openDepth(depth)
-	points = p.getProjectedPoints()
-	normals = p.getEstimatedNormals(points)
+	points, normals = p.projectDepth(cameraTransform)
 
-	print(points)
+	print(p.getBounds(points, 7))
+
 	m = ModelPreview()
 	m.start()
 
 	colors = np.ones(points.shape)
-	colors[np.all(normals == 0, axis=2)] = (1,0.5,0)
-	print(colors.shape)
+	colors[np.all(normals == 0, axis=1)] = (1,0.5,0)
 
 	normalProjections = points + normals/10
-	normalDraw = np.concatenate((points, normalProjections), axis=2)
+	normalDraw = np.concatenate((points, normalProjections), axis=1)
 
 	m.addRenderable(Renderable(points, Renderable.POINTS, pointSize=3, color=colors))
 	m.addRenderable(Renderable(normalDraw, Renderable.WIREFRAME, color=(0.1, 0.6,1)))
+	m.addCamera(Camera(57, 43, cameraTransform))
+

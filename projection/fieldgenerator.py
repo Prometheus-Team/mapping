@@ -9,16 +9,15 @@ from bubblegenerator import BubbleGenerator
 
 class FieldGenerator:
 
-	def __init__(self):
+	def __init__(self, resolution):
 		self.fieldLookup = {}
-		self.generator = BubbleGenerator(1)
+		self.generator = BubbleGenerator(1, resolution)
 		self.generateFieldLookup()
 
-	def getInverseField(self, vector):
-		return self.getField(-vector)
-
 	def getField(self, vector):
+		print(vector)
 		vector = pyrr.vector3.normalize(vector)
+		print(vector)
 		roundedVector = (round(vector[0]), round(vector[1]), round(vector[2]))
 		return self.fieldLookup[tuple(roundedVector)]
 
@@ -37,11 +36,11 @@ class FieldGenerator:
 
 
 if __name__ == '__main__':
-	c = FieldGenerator()
+	c = FieldGenerator(7)
 	m = ModelPreview()
 	m.start()
 
 	vector = (0,0.1,0.3)
 	m.addRenderable(Renderable(c.generator.points, Renderable.POINTS, pointSize=c.getField(vector)))
-	m.addRenderable(Renderable(np.array([(0,0,0),vector], dtype=np.float32), Renderable.WIREFRAME, color=(1,0.5,0)))
+	m.addRenderable(Renderable(np.array([(0,0,0),vector], dtype=np.float32), Renderable.WIREFRAME, renderType=GL_LINE_LOOP, pointSize=5, color=(1,0.5,0)))
 

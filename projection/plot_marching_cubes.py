@@ -30,6 +30,7 @@ from skimage.draw import ellipsoid
 
 # Generate a level set about zero of two identical ellipsoids in 3D
 ellip_base = ellipsoid(6, 10, 16, levelset=True)
+print(ellip_base)
 ellip_double = np.concatenate((ellip_base[:-1, ...],
                                ellip_base[2:, ...]), axis=0)
 
