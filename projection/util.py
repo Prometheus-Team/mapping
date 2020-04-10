@@ -6,7 +6,9 @@ def pair(x, y):
     return np.array(np.meshgrid(x,y)).T.reshape((-1,2))
 
 def pair3(x, y, z):
-	t = np.array(np.meshgrid(x,y,z)).T
+	grid = np.meshgrid(z,x,y)
+	propergrid = [grid[2], grid[0], grid[1]]
+	t = np.array(propergrid).T
 	t = t.reshape((-1,3))
 
 	return t

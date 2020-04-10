@@ -6,26 +6,34 @@ import math
 from previewer import *
 from numpy import genfromtxt
 import pyrr
+import matplotlib.pyplot as plt
 
 from normalestimator import NormalEstimator
 
 class Projector:
 
-
 	def __init__(self):
 		self.cloudset = None
 		self.width, self.height = 640, 480
 		self.dwidth, self.dheight = 320, 240
-		self.dx, self.dy = 35, 20
+		self.dx, self.dy = 48, 27
 		self.hfovd, self.vfovd = 57, 43
 		self.slantThreshold = 4
 		self.slantSeparation = 1e6
 		self.separationThreshold = 1e3
 
+		self.edgeImage = None
+		self.edgeStrengthThreshold = 0.1
+
 		self.xx, self.yy = None, None
 
 	def openImage(self, rgb):
 		self.rgb = rgb
+		edges = cv.Canny(cv.cvtColor(rgb, cv.COLOR_BGR2GRAY), 50, 50)
+		dst = np.clip(cv.blur(edges, (5,5)).astype(dtype=np.uint16) * 10, 0, 255)
+		self.edgeImage = cv.resize(dst, (self.dx, self.dy), interpolation = cv.INTER_AREA).astype(np.float32)/255
+		plt.imshow(self.edgeImage, cmap='gray')
+		plt.show()
 
 	def openDepth(self, depth):
 		self.depth = cv.resize(depth, (self.dx, self.dy), interpolation = cv.INTER_AREA)
@@ -33,9 +41,20 @@ class Projector:
 
 	def projectDepth(self, cameraTransform):
 		points = self.getProjectedPoints(cameraTransform)
+		edgePoints = self.getEdgePoints(points.copy())
 		normals = NormalEstimator.getEstimatedNormals(points)
 		points, normals = self.clean(points, normals)
-		return points, normals
+		return points, normals, edgePoints
+
+	def getEdgePoints(self, points):
+		print(points.shape)
+		print(self.edgeImage[...,np.newaxis].shape)
+		edgePoints = np.concatenate((points, self.edgeImage[...,np.newaxis]), axis=-1)
+		print(edgePoints.shape)
+		edgePoints = edgePoints[edgePoints[...,3] > self.edgeStrengthThreshold]
+		print(edgePoints.shape)
+		return edgePoints
+
 
 	def edges(self, d):
 		dx = ndimage.sobel(d, 0)
@@ -88,12 +107,14 @@ class Projector:
 
 
 if __name__ == '__main__':
-	depth = genfromtxt('../testdata/depth2.csv', delimiter=',')
+	depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
+	img = cv.imread('../testdata/ClippedDepthNormal.png')
 	cameraTransform = matrixTR((1,2,0),(0,50,40))
 
 	p = Projector()
+	p.openImage(img)
 	p.openDepth(depth)
-	points, normals = p.projectDepth(cameraTransform)
+	points, normals, edgePoints = p.projectDepth(cameraTransform)
 
 	print(p.getBounds(points, 7))
 
@@ -106,7 +127,8 @@ if __name__ == '__main__':
 	normalProjections = points + normals/10
 	normalDraw = np.concatenate((points, normalProjections), axis=1)
 
-	m.addRenderable(Renderable(points, Renderable.POINTS, pointSize=3, color=colors))
-	m.addRenderable(Renderable(normalDraw, Renderable.WIREFRAME, color=(0.1, 0.6,1)))
+	m.addRenderable(Renderable(edgePoints[:,0:3], Renderable.POINTS, color=(0.1, 0.6,1)))
+	# m.addRenderable(Renderable(points, Renderable.POINTS, pointSize=3, color=colors))
+	# m.addRenderable(Renderable(normalDraw, Renderable.WIREFRAME, color=(0.1, 0.6,1)))
 	m.addCamera(Camera(57, 43, cameraTransform))
 

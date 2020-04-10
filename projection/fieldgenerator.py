@@ -4,20 +4,28 @@ import pyrr
 
 from util import *
 from previewer import *
-from bubblegenerator import BubbleGenerator
+from bubblegenerator import *
+from normalestimator import *
 
 
 class FieldGenerator:
 
-	def __init__(self, resolution):
+	def __init__(self, generator, resolution):
 		self.fieldLookup = {}
-		self.generator = BubbleGenerator(1, resolution)
+		self.generator = generator(1, resolution)
 		self.generateFieldLookup()
 
 	def getField(self, vector):
-		print(vector)
+		# print(vector)
 		vector = pyrr.vector3.normalize(vector)
-		print(vector)
+		# print(vector)
+		roundedVector = (round(vector[0]), round(vector[1]), round(vector[2]))
+		return self.fieldLookup[tuple(roundedVector)]
+
+	def getMultiField(self, normals):
+		# print(vector)
+		normals = NormalEstimator.normalize(normals)
+		# print(vector)
 		roundedVector = (round(vector[0]), round(vector[1]), round(vector[2]))
 		return self.fieldLookup[tuple(roundedVector)]
 
@@ -36,7 +44,7 @@ class FieldGenerator:
 
 
 if __name__ == '__main__':
-	c = FieldGenerator(7)
+	c = FieldGenerator(SemiBubbleGenerator, 7)
 	m = ModelPreview()
 	m.start()
 

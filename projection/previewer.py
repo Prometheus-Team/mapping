@@ -36,7 +36,7 @@ class Renderable:
 	SOLID = 3
 	TEXTURED = 4
 
-	def __init__(self, points, renderMode, indices=None, color=None, pointSize=None, texCoord=None, renderType = None):
+	def __init__(self, points, renderMode, indices=None, color=None, normal=None, pointSize=None, texCoord=None, renderType = None):
 		self.data = np.array([],dtype=np.float32)
 		self.rowlen = 0
 		self.indices = np.array([],dtype=np.int32)
@@ -45,13 +45,14 @@ class Renderable:
 		self.color = np.array([],dtype=np.float32)
 		self.pointSize = np.array([],dtype=np.float32)
 		self.texCoord = np.array([],dtype=np.float32)
+		self.normals = np.array([],dtype=np.float32)
 		self.renderMode = renderMode
 		self.renderType = renderType
 
 		self.currentPreviewer = None
 		self.indiceStart = 0
 		self.dataStart = 0
-		self.buildVertices(points, indices, color, pointSize, texCoord)
+		self.buildVertices(points, indices, color, normal, pointSize, texCoord)
 
 	def getRange(self):
 		return ctypes.c_void_p(self.indiceStart * 4), self.indices.shape[0]
@@ -63,6 +64,8 @@ class Renderable:
 			return GL_POINTS
 		elif self.renderMode == Renderable.WIREFRAME:
 			return GL_LINES
+		elif self.renderMode == Renderable.SOLID:
+			return GL_TRIANGLES
 		else:
 			return GL_POINTS
 
@@ -100,15 +103,28 @@ class Renderable:
 
 		return texCoords		
 
-	def buildVertices(self, points, indices=None, color=None, pointSize=None, texCoord=None):
+	def getNormalArray(self, normal, rowAmount):
+		if normal is None:
+			normals = np.tile(np.array(((0,1,0),)), rowAmount).reshape((rowAmount, 3)).astype(dtype=np.float32)
+		elif len(normal) == 3:
+			normals = np.tile(normal, rowAmount).reshape((rowAmount, 3)).astype(dtype=np.float32)
+		else:
+			normals = np.array(normal, dtype=np.float32).reshape((rowAmount, 3))
+
+		return normals
+
+
+
+	def buildVertices(self, points, indices=None, color=None, normal=None, pointSize=None, texCoord=None):
 		points = self.getPointsArray(points)
 		rowAmount = points.shape[0]
 
 		colors = self.getColorArray(color, rowAmount)
 		pointSizes = self.getPointSizeArray(pointSize, rowAmount)
 		texCoords = self.getTexCoordArray(texCoord, rowAmount)
+		normals = self.getNormalArray(normal, rowAmount)
 
-		self.data = np.concatenate((points, colors, texCoords, pointSizes), axis=1)
+		self.data = np.concatenate((points, colors, texCoords, pointSizes, normals), axis=1)
 		self.rowlen = self.data.shape[1]
 		self.indices = indices
 		if type(self.indices) == type(None):
@@ -234,7 +250,7 @@ class ModelPreview(threading.Thread):
 	def addGrid(self):
 		vlin = np.linspace(-1,1,R.gridCount)
 		hlin = np.array([-1, 1], dtype=np.float32)
-		vy = pair3(hlin, np.zeros(1), vlin).astype(dtype=np.float32)
+		vy = pair3(hlin, vlin, np.zeros(1)).astype(dtype=np.float32)
 		vx = vy.copy()
 		vx[:,2] = vy[:,0]
 		vx[:,0] = vy[:,2]
@@ -338,6 +354,10 @@ class ModelPreview(threading.Thread):
 		color = glGetAttribLocation(self.shader, 'color')
 		glVertexAttribPointer(color, 3, GL_FLOAT, GL_FALSE, self.data.itemsize * self.rowlen, ctypes.c_void_p(12))
 		glEnableVertexAttribArray(color)
+
+		normal = glGetAttribLocation(self.shader, 'normal')
+		glVertexAttribPointer(normal, 3, GL_FLOAT, GL_FALSE, self.data.itemsize * self.rowlen, ctypes.c_void_p(36))
+		glEnableVertexAttribArray(normal)
 
 		# texCoords = glGetAttribLocation(self.shader, "InTexCoords")
 		# glVertexAttribPointer(texCoords, 2, GL_FLOAT, GL_FALSE,  self.data.itemsize * 8, ctypes.c_void_p(24))
@@ -448,5 +468,5 @@ if __name__ == '__main__':
 	verts = cube(32)
 	m = ModelPreview()
 	m.start()
-	m.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=1, color=(.6,.9,1)))
+	m.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=1, color=(verts + 1)/2))
 	# m.setRenderMode(ModelPreview.WIREFRAME)
