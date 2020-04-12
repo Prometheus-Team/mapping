@@ -1,6 +1,7 @@
 
 import numpy as np
 import pyrr
+import time
 
 def pair(x, y):
     return np.array(np.meshgrid(x,y)).T.reshape((-1,2))
@@ -43,5 +44,28 @@ def bounds(points):
 	maxBound = np.nanmax(extremePoints, axis = 0)
 	minBound = np.nanmin(extremePoints, axis = 0)
 	return minBound, maxBound
+
+	
+def btcnt(name):
+	if name in globals():
+		globals()[name][2] = time.time()
+	else:
+		globals()[name] = [0, 0, time.time()]
+
+def etcnt(name):
+	globals()[name][0] += time.time() - globals()[name][2]
+	globals()[name][1] += 1
+
+def ptcnt(name):
+	print(name, globals()[name][1], globals()[name][0])
+
+def cnt(name):
+	if name in globals():
+		globals()[name] += 1
+	else:
+		globals()[name] = 1
+
+def pcnt(name):
+	print(name, globals()[name])
 
 

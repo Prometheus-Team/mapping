@@ -32,8 +32,8 @@ class Projector:
 		edges = cv.Canny(cv.cvtColor(rgb, cv.COLOR_BGR2GRAY), 50, 50)
 		dst = np.clip(cv.blur(edges, (5,5)).astype(dtype=np.uint16) * 10, 0, 255)
 		self.edgeImage = cv.resize(dst, (self.dx, self.dy), interpolation = cv.INTER_AREA).astype(np.float32)/255
-		plt.imshow(self.edgeImage, cmap='gray')
-		plt.show()
+		# plt.imshow(self.edgeImage, cmap='gray')
+		# plt.show()
 
 	def openDepth(self, depth):
 		self.depth = cv.resize(depth, (self.dx, self.dy), interpolation = cv.INTER_AREA)

@@ -56,6 +56,7 @@ class NormalEstimator:
 
 		return normals
 
-	
 	def normalize(directions):
-		return directions/np.sqrt(np.sum(np.square(directions), axis=-1)[...,np.newaxis])
+		normal = directions/np.sqrt(np.sum(np.square(directions), axis=-1)[...,np.newaxis])
+		normal = np.nan_to_num(normal, 0)
+		return normal

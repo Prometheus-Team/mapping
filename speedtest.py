@@ -9,3 +9,10 @@ for i in range(10000):
 		h.append((i,i))
 
 print(time.time() - t)
+
+
+
+
+
+
+

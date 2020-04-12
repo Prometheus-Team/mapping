@@ -9,12 +9,13 @@ from fieldgenerator import *
 class R:
 
 	fieldResolution = 7
-	edgeFieldResolution = 7
+	edgeFieldResolution = 5
 	resolution = 100
 	cloudScale = 3
 	pointScale = 6
 	cloudVolumeColor = (0.5,1,0.8)
 	cloudBoundsColor = (1,0.4,1)
+	cloudEdgeColor = (0.9,0.8,0.4)
 
 
 class CloudSet:
@@ -25,8 +26,8 @@ class CloudSet:
 		self.pointScale = R.pointScale
 		self.points = cube(self.resolution) * self.resolution
 		self.clouds = [Cloud(self, (0, 0, 0))]
-		self.fieldGenerator = FieldGenerator(SemiBubbleGenerator, R.fieldResolution)
-		self.edgeFieldGenerator = FieldGenerator(BubbleGenerator, R.edgeFieldResolution)
+		self.fieldGenerator = SemiBubbleGenerator(1, R.fieldResolution)
+		self.edgeFieldGenerator = FullBubbleGenerator(1, R.edgeFieldResolution)
 
 	def cloudScaleDown(self, points):
 		return (points/self.resolution) * self.cloudScale
@@ -49,16 +50,18 @@ class CloudSet:
 
 		points, normals = self.removeEmptyNormals(points, normals)
 		# points = self.approximatePoints(points)
-		# fields = self.fieldGenerator.getMultiField(normals)
-		fields = [self.fieldGenerator.getField(i) for i in normals]
+		fields = self.fieldGenerator.getMultiField(normals)
+		# fields = [self.fieldGenerator.getField(i) for i in normals]
 
 		for i in self.clouds:
 			i.addProjections(fields, points)
 
 	def infuseEdgeProjections(self, edgePoints):
-		edgePoints = edgePoints.reshape((-1,3))
+		edgePoints = edgePoints.reshape((-1,4))[...,0:3]
 
-
+		field = self.edgeFieldGenerator.getMultiField(edgePoints)
+		for i in self.clouds:
+			i.addEdgeProjections(field, edgePoints)
 
 
 	def approximatePoints(self, points):
@@ -77,6 +80,7 @@ class CloudSet:
 		renderables = []
 		for i in self.clouds:
 			renderables.append(i.getVolumeRenderable())
+			renderables.append(i.getEdgeRenderable())
 			renderables.append(i.getBoundsRenderable())
 		return renderables
 
@@ -106,6 +110,10 @@ class Cloud:
 		points = self.cloudSet.getCloudScaledPoints()
 		return Renderable(points, Renderable.POINTS, pointSize = self.volume/20, color=R.cloudVolumeColor)
 
+	def getEdgeRenderable(self):
+		points = self.cloudSet.getCloudScaledPoints()
+		return Renderable(points, Renderable.POINTS, pointSize = self.edge/10, color=R.cloudEdgeColor)
+
 	def getBoundsRenderable(self):
 		verts, inds = RenderUtil.getBounds(self.cloudSet.getCloudScaledPoints())
 		return Renderable(verts, Renderable.WIREFRAME, indices=inds, color=R.cloudBoundsColor)
@@ -130,8 +138,33 @@ class Cloud:
 		return volumeBounds, fieldBounds
 
 	def addProjections(self, fields, points):
+		# self.addMultiProjection(fields, points)
 		for i in range(points.shape[0]):
 			self.addProjection(fields[i], points[i])
+
+	# def addMultiProjection(self, fields, points):
+	# 	points = np.rint((points/R.pointScale + self.origin) * self.cloudSet.resolution).astype(dtype=np.int32)
+	# 	fieldShape = fields.shape
+
+	# 	fieldBounds = np.array(((0,fieldShape[2]),(0,fieldShape[1]),(0,fieldShape[0])), dtype=np.int32)
+	# 	fieldShape = np.array(fieldShape)
+
+	# 	extent = (fieldShape - 1)/2
+
+	# 	volumeBounds = np.array([points - extent, points + extent + 1], dtype=np.int32).T
+	# 	actualVolumeBounds = np.array(((0,self.volume.shape[2]),(0,self.volume.shape[1]),(0,self.volume.shape[0])), dtype=np.int32)
+
+	# 	extras = np.minimum((volumeBounds*(1,-1)) + actualVolumeBounds, 0) * (-1,1)
+
+	# 	# print(volumeBounds, fieldBounds, extras, "\n")
+
+	# 	volumeBounds += extras
+	# 	fieldBounds += extras
+
+	# 	if (np.any(volumeBounds < 0) or np.any(fieldBounds < 0)):
+	# 		return
+
+	# 	self.volume[vb[0][0]:vb[0][1], vb[1][0]:vb[1][1], vb[2][0]:vb[2][1]] += field[fb[0][0]:fb[0][1], fb[1][0]:fb[1][1], fb[2][0]:fb[2][1]]
 
 
 	def addProjection(self, field, point):
@@ -144,10 +177,29 @@ class Cloud:
 		if (np.any(vb < 0) or np.any(fb < 0)):
 			return
 
-		# print(vb, fb, "\n")
-
 		self.volume[vb[0][0]:vb[0][1], vb[1][0]:vb[1][1], vb[2][0]:vb[2][1]] += field[fb[0][0]:fb[0][1], fb[1][0]:fb[1][1], fb[2][0]:fb[2][1]]
 
+
+	def addEdgeProjections(self, field, points):
+		# self.addMultiProjection(fields, points)
+		for i in range(points.shape[0]):
+			self.addEdgeProjection(field, points[i])
+
+	def addEdgeProjection(self, field, point):
+
+		print(point)
+		point = np.rint((point/R.pointScale + self.origin) * self.cloudSet.resolution).astype(dtype=np.int32)
+		fieldShape = field.shape
+		vb, fb = self.getVolumeField(point, fieldShape)
+
+		print(point)
+		if (np.any(vb < 0) or np.any(fb < 0)):
+			print("Point", point)
+			return
+
+		# print(vb, fb, "\n")
+
+		self.edge[vb[0][0]:vb[0][1], vb[1][0]:vb[1][1], vb[2][0]:vb[2][1]] += field[fb[0][0]:fb[0][1], fb[1][0]:fb[1][1], fb[2][0]:fb[2][1]]
 
 
 if __name__ == '__main__':
@@ -158,6 +210,7 @@ if __name__ == '__main__':
 	# c.infuseProjections(points, np.array(((0,1,0),(0,-1,0),(0,1,0))))
 	# c.infuseProjections(np.array(((1,1,2))), np.array(((1,-1,1))))
 	c.infuseProjections(np.array(((1,1,2))), np.array(((0,1,0))))
+	c.infuseEdgeProjections(cube(4)*2)
 
 	m.addRenderables(c.getCloudRenderables())
 	m.addRenderable(Renderable(np.array(((1,1,2))), Renderable.POINTS, pointSize=4, color=(0,1,0)))
