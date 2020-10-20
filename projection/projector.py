@@ -47,12 +47,12 @@ class Projector:
 		return points, normals, edgePoints
 
 	def getEdgePoints(self, points):
-		print(points.shape)
-		print(self.edgeImage[...,np.newaxis].shape)
+		# print(points.shape)
+		# print(self.edgeImage[...,np.newaxis].shape)
 		edgePoints = np.concatenate((points, self.edgeImage[...,np.newaxis]), axis=-1)
-		print(edgePoints.shape)
+		# print(edgePoints.shape)
 		edgePoints = edgePoints[edgePoints[...,3] > self.edgeStrengthThreshold]
-		print(edgePoints.shape)
+		# print(edgePoints.shape)
 		return edgePoints
 
 

@@ -95,6 +95,7 @@ class SemiBubbleGenerator(FieldGenerator):
 
 if __name__ == '__main__':
 	c = SemiBubbleGenerator(1, 7)
+	f = FullBubbleGenerator(1, 5)
 	m = ModelPreview()
 	m.start()
 

@@ -5,9 +5,10 @@ import pymesh
 from fieldgenerator import *
 from cloudset import *
 from projector import *
+from decimator import *
 
 
-from vtk import (vtkSphereSource, vtkPolyData, vtkDecimatePro)
+#from vtk import (vtkSphereSource, vtkPolyData, vtkDecimatePro)
 
 class Projection:
 
@@ -17,35 +18,6 @@ class Projection:
 
 	def project(self):
 		pass
-
-
-# def decimation():
-#     sphereS = vtkSphereSource()
-#     sphereS.Update()
-
-#     print(sphereS.GetOutput())
-
-#     inputPoly = vtkPolyData()
-#     inputPoly.ShallowCopy(sphereS.GetOutput())
-
-#     print("Before decimation\n"
-#           "-----------------\n"
-#           "There are " + str(inputPoly.GetNumberOfPoints()) + "points.\n"
-#           "There are " + str(inputPoly.GetNumberOfPolys()) + "polygons.\n")
-
-#     decimate = vtkDecimatePro()
-#     decimate.SetInputData(inputPoly)
-#     decimate.SetTargetReduction(.10)
-#     decimate.Update()
-
-#     decimatedPoly = vtkPolyData()
-#     decimatedPoly.ShallowCopy(decimate.GetOutput())
-
-#     print("After decimation \n"
-#           "-----------------\n"
-#           "There are " + str(decimatedPoly.GetNumberOfPoints()) + "points.\n"
-#           "There are " + str(decimatedPoly.GetNumberOfPolys()) + "polygons.\n")
-
 
 if __name__ == '__main__':
 
@@ -59,6 +31,7 @@ if __name__ == '__main__':
 
 	p = Projector()
 	c = CloudSet()
+	d = Decimator()
 	
 	btcnt('raver')
 
@@ -72,13 +45,23 @@ if __name__ == '__main__':
 	etcnt('raver')
 
 	colors = np.ones(points.shape)
-	colors[np.all(normals == 0, axis=1)] = (1,0.5,0)
+	colors[np.all(normals == 0, axis=1)] = (1, 0.5, 0)
 
 	normalProjections = points + normals/10
 	normalDraw = np.concatenate((points, normalProjections), axis=1)
 
-	verts, faces, normals, values = measure.marching_cubes_lewiner(c.getCloud(), 0.1)
-	
+	verts, faces, normals, values = measure.marching_cubes(c.getCloud(), 0.1)
+	edges = c.getEdgeStrength(verts)
+	print(edges[200:300])
+
+	print(edges[edges > 0])
+
+	verts, faces, normals = d.collapse(verts, faces, normals, edges)
+	edges = c.getEdgeStrength(verts)
+	verts, faces, normals = d.collapse(verts, faces, normals, edges)
+	edges = c.getEdgeStrength(verts)
+	verts, faces, normals = d.collapse(verts, faces, normals, edges)
+
 	normals = NormalEstimator.getMeshNormals(verts, faces)
 
 	# normalProjections = verts + normals/10
@@ -98,10 +81,10 @@ if __name__ == '__main__':
 
 	m.addRenderables(c.getCloudRenderables())
 
-	print(verts)
+	# print(verts)
 	ptcnt('raver')
 
-	m.addRenderable(Renderable(c.pointScaleDown(verts) - 3, Renderable.WIREFRAME, indices=faces, normal=normals))
+	m.addRenderable(Renderable(c.pointScaleDown(verts) - 3, Renderable.SOLID, indices=faces, normal=normals))
 
 	time.sleep(1)
 

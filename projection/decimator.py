@@ -7,25 +7,30 @@ from normalestimator import *
 
 class R:
 
-	dotThreshold = 0.5
+	dotThreshold = 0.7
 
 class Decimator:
 
 	def __init__(self):
 		pass
 
-	def collapse(self, verts, faces, normals):
+	def collapse(self, verts, faces, normals, intensity = None):
 
 		# print(normals)
+
+		if intensity is None:
+			intensity = np.zeros(verts.shape[0])	
 
 		nverts = verts.copy()
 		exclusiveFaces = self.getExclusiveFaces(verts, faces)
 		# exclusiveFaces = self.getMultiExclusiveFaces(faces)
 
 		faceNormals = normals[exclusiveFaces]
-		dots = np.sum(np.product(faceNormals, axis=1), axis=1)
-		# print(dots)
-		collapseCondition = dots > R.dotThreshold
+		intensities = intensity[exclusiveFaces]
+		dots = (np.sum(np.product(faceNormals[:,0:2], axis=1), axis=1) + np.sum(np.product(faceNormals[:,1:3], axis=1), axis=1) + np.sum(np.product(faceNormals[:,(0,2)], axis=1), axis=1))/3
+		intensity = np.sum(intensities, axis=1) * 10
+		# print(intensity)
+		collapseCondition = dots * (1 - np.minimum(intensity, 1)) > R.dotThreshold
 
 		collapsibleFaces = exclusiveFaces[collapseCondition]
 		vertAverages = np.sum(verts[collapsibleFaces], axis=1)/3
@@ -118,6 +123,9 @@ if __name__=='__main__':
 	verts, faces, normals = d.collapse(verts, faces, normals)
 	verts, faces, normals = d.collapse(verts, faces, normals)
 	verts, faces, normals = d.collapse(verts, faces, normals)
+	# verts, faces, normals = d.collapse(verts, faces, normals)
+	# verts, faces, normals = d.collapse(verts, faces, normals)
+	# verts, faces, normals = d.collapse(verts, faces, normals)
 
 	# faces = d.getExclusiveFaces(verts, faces)
 	# faces = d.getMultiExclusiveFaces(faces)

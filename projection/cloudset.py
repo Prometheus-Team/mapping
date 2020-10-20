@@ -10,7 +10,8 @@ class R:
 
 	fieldResolution = 7
 	edgeFieldResolution = 5
-	resolution = 100
+	cloudSetResolution = 100
+	cloudResolution = 50
 	cloudScale = 3
 	pointScale = 6
 	cloudVolumeColor = (0.5,1,0.8)
@@ -21,9 +22,11 @@ class R:
 class CloudSet:
 
 	def __init__(self):
-		self.resolution = R.resolution
+		self.resolution = R.cloudSetResolution
 		self.cloudScale = R.cloudScale
 		self.pointScale = R.pointScale
+
+		#locations of the points the clouds affect
 		self.points = cube(self.resolution) * self.resolution
 		self.clouds = [Cloud(self, (0, 0, 0))]
 		self.fieldGenerator = SemiBubbleGenerator(1, R.fieldResolution)
@@ -43,6 +46,14 @@ class CloudSet:
 
 	def getCloudScaledPoints(self):
 		return self.cloudScaleDown(self.points)
+
+	def getEdgeStrength(self, points):
+		edgeStrength = np.zeros(points.shape[0]).astype(np.float32)
+		for i in self.clouds:
+			edgeStrength += i.getEdgeStrength(points)
+
+		# edgeStrength /= np.max(edgeStrength) if np.max(edgeStrength) != 0 else 1
+		return edgeStrength
 
 	def infuseProjections(self, points, normals):
 		points = points.reshape((-1,3))
@@ -96,15 +107,31 @@ class Cloud:
 
 	def __init__(self, cloudSet, origin):
 		self.cloudSet = cloudSet
-		self.origin = np.array(origin) + (0.5, 0.5, 0.5)
+		self.origin = np.array(origin) + (0.5,0.5,0.5)
 		self.volume = np.zeros(self.getSize())
 		self.edge = np.zeros(self.getSize())
 
 	def getSize(self):
-		return (self.cloudSet.resolution, self.cloudSet.resolution, self.cloudSet.resolution)
+		resolution = R.cloudResolution;
+		return np.array((self.cloudSet.resolution, self.cloudSet.resolution, self.cloudSet.resolution))
 
-	def getOffset(self):
-		return self.bounds[:,0]
+	def getBounds(self):
+		return (self.origin - self.getSize()/2, self.origin + self.getSize()/2)
+
+	def getPointIndex(self, points):
+		return np.rint((points/R.pointScale + self.origin) * self.cloudSet.resolution).astype(dtype=np.int32)
+
+	def getEdgeStrength(self, points):
+		points = np.rint(points).astype(dtype=np.int32)
+		bounds = self.getBounds()
+		print(bounds)
+		nullPoints = np.any(np.logical_or(points > self.getSize(), points < np.array([[0,0,0]])), axis=1)
+		points[nullPoints] = 0
+		edgeStrength = self.edge[points[:,0], points[:,1], points[:,2]]
+		# print(self.edge)
+		edgeStrength[nullPoints] = 0
+		# print(edgeStrength)
+		return edgeStrength
 
 	def getVolumeRenderable(self):
 		points = self.cloudSet.getCloudScaledPoints()
@@ -169,7 +196,7 @@ class Cloud:
 
 	def addProjection(self, field, point):
 
-		point = np.rint((point/R.pointScale + self.origin) * self.cloudSet.resolution).astype(dtype=np.int32)
+		point = self.getPointIndex(point)
 		fieldShape = field.shape
 		vb, fb = self.getVolumeField(point, fieldShape)
 
@@ -187,14 +214,14 @@ class Cloud:
 
 	def addEdgeProjection(self, field, point):
 
-		print(point)
+		# print(point)
 		point = np.rint((point/R.pointScale + self.origin) * self.cloudSet.resolution).astype(dtype=np.int32)
 		fieldShape = field.shape
 		vb, fb = self.getVolumeField(point, fieldShape)
 
-		print(point)
+		# print(point)
 		if (np.any(vb < 0) or np.any(fb < 0)):
-			print("Point", point)
+			# print("Point", point)
 			return
 
 		# print(vb, fb, "\n")
@@ -211,6 +238,9 @@ if __name__ == '__main__':
 	# c.infuseProjections(np.array(((1,1,2))), np.array(((1,-1,1))))
 	c.infuseProjections(np.array(((1,1,2))), np.array(((0,1,0))))
 	c.infuseEdgeProjections(cube(4)*2)
+
+	edgeStrength = c.getEdgeStrength(np.array([[0,0,0],[3,3.7,4.8]]))
+	print(edgeStrength)
 
 	m.addRenderables(c.getCloudRenderables())
 	m.addRenderable(Renderable(np.array(((1,1,2))), Renderable.POINTS, pointSize=4, color=(0,1,0)))
