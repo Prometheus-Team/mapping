@@ -19,7 +19,7 @@ class Decimator:
 		# print(normals)
 
 		if intensity is None:
-			intensity = np.zeros(verts.shape[0])	
+			intensity = np.zeros(verts.shape[0])
 
 		nverts = verts.copy()
 		exclusiveFaces = self.getExclusiveFaces(verts, faces)

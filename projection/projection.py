@@ -27,7 +27,7 @@ if __name__ == '__main__':
 
 	depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
 	img = cv.imread('../testdata/ClippedDepthNormal.png')
-	cameraTransform = matrixTR((-1,1,-1),(0,50,15))
+	cameraTransform = matrixTR((2,1,-1),(0,50,15))
 
 	p = Projector()
 	c = CloudSet()

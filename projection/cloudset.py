@@ -28,9 +28,12 @@ class CloudSet:
 
 		#locations of the points the clouds affect
 		self.points = cube(self.resolution) * self.resolution
-		self.clouds = [Cloud(self, (0, 0, 0))]
+		self.clouds = [Cloud(self, (0, 0, 0)), Cloud(self, (1,0,0))]
 		self.fieldGenerator = SemiBubbleGenerator(1, R.fieldResolution)
 		self.edgeFieldGenerator = FullBubbleGenerator(1, R.edgeFieldResolution)
+
+	def getPoints(self, cloud):
+		return self.points + cloud.origin * self.resolution
 
 	def cloudScaleDown(self, points):
 		return (points/self.resolution) * self.cloudScale
@@ -50,7 +53,7 @@ class CloudSet:
 	def getEdgeStrength(self, points):
 		edgeStrength = np.zeros(points.shape[0]).astype(np.float32)
 		for i in self.clouds:
-			edgeStrength += i.getEdgeStrength(points)
+			edgeStrength += i.getCloudEdgeStrength(points)
 
 		# edgeStrength /= np.max(edgeStrength) if np.max(edgeStrength) != 0 else 1
 		return edgeStrength
@@ -90,8 +93,8 @@ class CloudSet:
 	def getCloudRenderables(self):
 		renderables = []
 		for i in self.clouds:
-			renderables.append(i.getVolumeRenderable())
-			renderables.append(i.getEdgeRenderable())
+			# renderables.append(i.getVolumeRenderable())
+			# renderables.append(i.getEdgeRenderable())
 			renderables.append(i.getBoundsRenderable())
 		return renderables
 
@@ -102,29 +105,42 @@ class CloudSet:
 		for i in self.clouds:
 			pass
 
+	def getOrigins(self):
+		origin = 
+		for i in self.clouds:
+
+
+	def getFullCloudSize(self):
+
+
+
 
 class Cloud:
 
 	def __init__(self, cloudSet, origin):
 		self.cloudSet = cloudSet
-		self.origin = np.array(origin) + (0.5,0.5,0.5)
+		self.origin = np.array(origin)
+		self.center = np.array(origin) + (0.5,0.5,0.5)
 		self.volume = np.zeros(self.getSize())
 		self.edge = np.zeros(self.getSize())
+
+	def offset(self, points):
+		return points + self.origin * self.cloudSet.pointScaleDown(self.cloudSet.resolution)
 
 	def getSize(self):
 		resolution = R.cloudResolution;
 		return np.array((self.cloudSet.resolution, self.cloudSet.resolution, self.cloudSet.resolution))
 
 	def getBounds(self):
-		return (self.origin - self.getSize()/2, self.origin + self.getSize()/2)
+		return (self.center - self.getSize()/2, self.center + self.getSize()/2)
 
 	def getPointIndex(self, points):
-		return np.rint((points/R.pointScale + self.origin) * self.cloudSet.resolution).astype(dtype=np.int32)
+		return np.rint((points/R.pointScale + self.center) * self.cloudSet.resolution).astype(dtype=np.int32)
 
-	def getEdgeStrength(self, points):
+	def getCloudEdgeStrength(self, points):
 		points = np.rint(points).astype(dtype=np.int32)
 		bounds = self.getBounds()
-		print(bounds)
+		# print(bounds)
 		nullPoints = np.any(np.logical_or(points > self.getSize(), points < np.array([[0,0,0]])), axis=1)
 		points[nullPoints] = 0
 		edgeStrength = self.edge[points[:,0], points[:,1], points[:,2]]
@@ -142,7 +158,7 @@ class Cloud:
 		return Renderable(points, Renderable.POINTS, pointSize = self.edge/10, color=R.cloudEdgeColor)
 
 	def getBoundsRenderable(self):
-		verts, inds = RenderUtil.getBounds(self.cloudSet.getCloudScaledPoints())
+		verts, inds = RenderUtil.getBounds(self.offset(self.cloudSet.getCloudScaledPoints()))
 		return Renderable(verts, Renderable.WIREFRAME, indices=inds, color=R.cloudBoundsColor)
 
 	def getVolumeField(self, point, fieldShape):
@@ -215,7 +231,7 @@ class Cloud:
 	def addEdgeProjection(self, field, point):
 
 		# print(point)
-		point = np.rint((point/R.pointScale + self.origin) * self.cloudSet.resolution).astype(dtype=np.int32)
+		point = np.rint((point/R.pointScale + self.center) * self.cloudSet.resolution).astype(dtype=np.int32)
 		fieldShape = field.shape
 		vb, fb = self.getVolumeField(point, fieldShape)
 
@@ -240,7 +256,7 @@ if __name__ == '__main__':
 	c.infuseEdgeProjections(cube(4)*2)
 
 	edgeStrength = c.getEdgeStrength(np.array([[0,0,0],[3,3.7,4.8]]))
-	print(edgeStrength)
+	# print(edgeStrength)
 
 	m.addRenderables(c.getCloudRenderables())
 	m.addRenderable(Renderable(np.array(((1,1,2))), Renderable.POINTS, pointSize=4, color=(0,1,0)))
@@ -248,7 +264,7 @@ if __name__ == '__main__':
 
 	m.start()
 
-	print(cube(2))
+	# print(cube(2))
 
 
 
