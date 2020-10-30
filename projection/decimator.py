@@ -14,6 +14,7 @@ class Decimator:
 	def __init__(self):
 		pass
 
+
 	def collapse(self, verts, faces, normals, intensity = None):
 
 		# print(normals)

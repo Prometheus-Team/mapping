@@ -465,7 +465,7 @@ class ModelController:
 
 
 if __name__ == '__main__':
-	verts = cube(32)
+	verts = (box(32, 96, 64) * np.array((1,3,2))) - np.array((0, -2, 1))
 	m = ModelPreview()
 	m.start()
 	m.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=1, color=(verts + 1)/2))

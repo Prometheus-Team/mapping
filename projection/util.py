@@ -20,6 +20,17 @@ def cube(resolution):
 	verts = verts.reshape((resolution, resolution, resolution, 3))
 	return verts
 
+def boxFrom(resolution):
+	return box(resolution[0], resolution[1], resolution[2])
+
+def box(x, y, z):
+	linx = np.linspace(-1, 1, x)
+	liny = np.linspace(-1, 1, y)
+	linz = np.linspace(-1, 1, z)
+	verts = pair3(linz, linx, liny).astype(dtype=np.float32)
+	verts = verts.reshape((x, y, z, 3))
+	return verts
+
 def transform(points, matrix):
 	return np.append(points, np.ones((points.shape[0], 1)), axis=1).dot(matrix)[:,0:3]
 
@@ -67,5 +78,4 @@ def cnt(name):
 
 def pcnt(name):
 	print(name, globals()[name])
-
 
