@@ -7,7 +7,6 @@ from cloudset import *
 from projector import *
 from decimator import *
 
-
 #from vtk import (vtkSphereSource, vtkPolyData, vtkDecimatePro)
 
 class Projection:
@@ -22,8 +21,13 @@ class Projection:
 		self.projector.openImage(img)
 		points, normals, edgePoints = self.projector.projectDepth(cameraTransform)
 
+		print("Bounds", bounds(0.5 + points/CloudSet.pointScale))
+
 		self.cloudSet.cloudSetProjector.infuseProjections(points, normals)
 		# self.cloudSet.cloudSetProjector.infuseEdgeProjections(edgePoints)
+
+	def addWeightedProjection(self, projection, weight):
+		self.cloudSet.mergeCloudSet(projection.cloudSet, weight)
 
 	def getModel(self):
 		cloudField = self.cloudSet.getCloud()
@@ -34,6 +38,10 @@ class Projection:
 		# verts, faces, normals, edges = self.decimate(verts, faces, normals, edges, 3)
 
 		return verts, faces, normals
+
+	def getModelRenderable(self):
+		verts, faces, normals = self.getModel()
+		return Renderable(self.cloudSet.pointScaleDown(verts) - CloudSet.cloudScale, Renderable.SOLID, indices=faces, normal=normals)
 
 	def decimate(self, verts, faces, normals, edges, iterations):
 
@@ -110,7 +118,7 @@ if __name__ == '__main__':
 
 	# m.addRenderable(Renderable(p.cloudSet.pointScaleDown(verts) - 3, Renderable.SOLID, indices=faces, normal=normals))
 
-	m.addRenderable(Renderable(p.cloudSet.pointScaleDown(verts) - CloudSet.cloudScale, Renderable.SOLID, indices=faces, normal=normals))
+	m.addRenderable(p.getModelRenderable())
 
 	# verts, inds = RenderUtil.getBounds(p.cloudSet.getCloud())
 	# m.addRenderable(Renderable(verts, Renderable.WIREFRAME, indices=inds, color=(1,0.8,1)))

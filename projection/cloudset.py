@@ -25,8 +25,16 @@ class CloudSet:
 		#locations of the points the clouds affect
 		self.points = cube(self.resolution) * self.resolution
 		self.cloudMap = CloudMap(self)
-		self.clouds = [Cloud(self, (0,0,0)), Cloud(self, (1,0,0))]
+		self.clouds = []
 		self.cloudSetProjector = CloudSetProjector(self)
+
+	def addCloud(self, origin):
+		self.clouds.append(Cloud(self, origin))
+
+	def getCloudWithOrigin(self, origin):
+		for i in self.clouds:
+			if np.all(i.origin == origin):
+				return i
 
 	def getPoints(self, cloud):
 		return self.points + cloud.origin * self.resolution
@@ -57,7 +65,7 @@ class CloudSet:
 	def getCloudRenderables(self):
 		renderables = []
 		for i in self.clouds:
-			renderables.append(i.getVolumeRenderable())
+			# renderables.append(i.getVolumeRenderable())
 			# renderables.append(i.getEdgeRenderable())
 			renderables.append(i.getBoundsRenderable())
 		return renderables
@@ -79,6 +87,20 @@ class CloudSet:
 
 		return volume
 
+	def mergeCloudSet(self, cloudSet, weight):
+		self.addMissingCloudsFrom(cloudSet)
+
+		for i in self.clouds:
+			toMerge = cloudSet.getCloudWithOrigin(i.origin)
+			print("Merge",i,"with",toMerge)
+			i.mergeCloud(toMerge, weight)
+
+	def addMissingCloudsFrom(self, cloudSet):
+
+		for i in cloudSet.clouds:
+			if (self.getCloudWithOrigin(i.origin) == None):
+				self.addCloud(i.origin)
+
 	def getCloudsAffected(self, points):
 		for i in self.clouds:
 			pass
@@ -92,6 +114,13 @@ class CloudSetProjector:
 		self.edgeFieldGenerator = FullBubbleGenerator(1, CloudSet.edgeFieldResolution)
 
 	def infuseProjections(self, points, normals):
+
+		pointBounds = bounds(0.5 + points/CloudSet.pointScale)
+		blocks = self.getBlocksIn(pointBounds)
+
+		for i in blocks:
+			self.cloudSet.addCloud(i)
+
 		points = points.reshape((-1,3))
 		normals = normals.reshape((-1,3))
 
@@ -109,6 +138,28 @@ class CloudSetProjector:
 		field = self.edgeFieldGenerator.getMultiField(edgePoints)
 		for i in self.cloudSet.clouds:
 			i.cloudProjector.addEdgeProjections(field, edgePoints)
+
+	def getBlocksIn(self, bounds):
+
+		bounds = np.array(bounds, dtype=np.int32)
+		bounds[1] = bounds[1] + 1
+
+		xList = np.arange(bounds[0][0], bounds[1][0]).astype(dtype=np.int32)
+		yList = np.arange(bounds[0][1], bounds[1][1]).astype(dtype=np.int32)
+		zList = np.arange(bounds[0][2], bounds[1][2]).astype(dtype=np.int32)
+
+		# zero = np.zeros(1).astype(dtype= np.int32)
+
+		# if (len(xList) == 0):
+		# 	xList = zero
+
+		# if (len(yList) == 0):
+		# 	yList = zero
+
+		# if (len(zList) == 0):
+		# 	zList = zero
+
+		return pair3(zList, xList, yList)
 
 	def approximatePoints(self, points):
 		points = np.rint(self.pointScaleUp(points)).astype(dtype=np.int32)
@@ -226,6 +277,11 @@ class Cloud:
 
 		return volumeBounds, fieldBounds
 
+	def mergeCloud(self, cloud, weight):
+
+		self.volume = (1 - weight) * self.volume + weight * cloud.volume
+		self.edge = (1 - weight) * self.edge + weight * cloud.edge
+
 
 
 class CloudProjector:
@@ -300,24 +356,26 @@ class CloudProjector:
 
 if __name__ == '__main__':
 
-	m = ModelPreview()
-	c = CloudSet()
-	points = np.array(((1,0,0),(0,2,0),(0,0,3)))/2
-	# c.infuseProjections(points, np.array(((0,1,0),(0,-1,0),(0,1,0))))
-	# c.infuseProjections(np.array(((1,1,2))), np.array(((1,-1,1))))
-	c.cloudSetProjector.infuseProjections(np.array(((1,1,2))), np.array(((0,1,0))))
-	c.cloudSetProjector.infuseEdgeProjections(cube(4)*2)
+	# m = ModelPreview()
+	# c = CloudSet()
+	# points = np.array(((1,0,0),(0,2,0),(0,0,3)))/2
+	# # c.infuseProjections(points, np.array(((0,1,0),(0,-1,0),(0,1,0))))
+	# # c.infuseProjections(np.array(((1,1,2))), np.array(((1,-1,1))))
+	# c.cloudSetProjector.infuseProjections(np.array(((1,1,2))), np.array(((0,1,0))))
+	# c.cloudSetProjector.infuseEdgeProjections(cube(4)*2)
 
-	edgeStrength = c.getEdgeStrength(np.array([[0,0,0],[3,3.7,4.8]]))
-	# print(edgeStrength)
+	# edgeStrength = c.getEdgeStrength(np.array([[0,0,0],[3,3.7,4.8]]))
+	# # print(edgeStrength)
 
-	m.addRenderables(c.getCloudRenderables())
-	m.addRenderable(Renderable(np.array(((1,1,2))), Renderable.POINTS, pointSize=4, color=(0,1,0)))
-	# m.addRenderable(Renderable(rotate(points, (90, 0, 90)), Renderable.POINTS, pointSize=4, color=(0,1,0)))
+	# m.addRenderables(c.getCloudRenderables())
+	# m.addRenderable(Renderable(np.array(((1,1,2))), Renderable.POINTS, pointSize=4, color=(0,1,0)))
+	# # m.addRenderable(Renderable(rotate(points, (90, 0, 90)), Renderable.POINTS, pointSize=4, color=(0,1,0)))
 
-	m.start()
+	# m.start()
 
-	# print(cube(2))
+	# # print(cube(2))
+
+	print(CloudSetProjector.getBlocksIn(((-0.2,0.1,0.1),(4,2,3))))
 
 
 
