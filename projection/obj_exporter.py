@@ -1,4 +1,6 @@
+from normalestimator import NormalEstimator
 
+import numpy as np
 
 class OBJExporter:
 
@@ -6,6 +8,11 @@ class OBJExporter:
 		OBJExporter.export(mesh[0], mesh[1], mesh[2], name)
 
 	def export(vertices, faces, normals, name):
+		normals = NormalEstimator.getFaceNormals(vertices, faces);
+
+		print("Verts:", len(vertices))
+		print("Faces:", len(faces))
+		print("Normals:", len(normals))
 
 		text = OBJExporter.getExportContent(vertices, faces, normals, name)
 		file = open(name + '.obj', 'w')
@@ -36,5 +43,5 @@ class OBJExporter:
 
 if __name__ == '__main__':
 
-	OBJExporter.export([(1,2,3),(3,1,1),(4,4,2)], [(1,2,3)], [(1,0,0)], "Igno")
+	OBJExporter.export(np.array([(1,2,3),(3,1,1),(4,4,2)]), np.array([(0,1,2)]), np.array([(1,0,0)]), "Igno")
 

@@ -42,12 +42,12 @@ if __name__ == '__main__':
 	f2 = Frame(img, depth, cameraTransform2)
 
 	a.addFrame(f1)
-	a.addFrame(f2)
+	# a.addFrame(f2)
 
 	m.addRenderable(a.projection.getModelRenderable())
 
 	m.addCamera(f1.getCamera())
-	m.addCamera(f2.getCamera())
+	# m.addCamera(f2.getCamera())
 
 	m.addRenderables(a.projection.cloudSet.getCloudRenderables())
 

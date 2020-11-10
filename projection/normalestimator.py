@@ -39,12 +39,19 @@ class NormalEstimator:
 
 		return normals
 
-	def getMeshNormals(verts, faces):
+	def getFaceNormals(verts, faces):
 
 		vertFaces = verts[faces]
 		facenormals = np.cross(vertFaces[:,0] - vertFaces[:,1], vertFaces[:,2] - vertFaces[:,0])
 
 		facenormals = NormalEstimator.normalize(facenormals)
+
+		return facenormals
+
+
+	def getMeshNormals(verts, faces):
+		
+		facenormals = NormalEstimator.getFaceNormals(verts, faces)
 
 		normals = np.zeros(verts.shape, dtype=verts.dtype)
 
