@@ -1,4 +1,5 @@
-##Mapping-Module
+# Mapping-Module
+
 This module provides the tools for generating 3D meshes from video streams.
 
 Tools:
