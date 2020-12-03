@@ -28,21 +28,19 @@ class Frame:
 
 if __name__ == '__main__':
 
-
 	depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
 	img = cv.imread('../testdata/ClippedDepthNormal.png')
-	cameraTransform1 = matrixTR((1,1,-1),(0,50,15))
-	cameraTransform2 = matrixTR((0.5,1,-1),(0,50,15))
+	cameraTransform1 = matrixTR((-1,1,-1),(0,50,15))
+	cameraTransform2 = matrixTR((-1,10,-1),(0,40,15))
 
 	m = ModelPreview()
 	a = Aggregate()
-
 
 	f1 = Frame(img, depth, cameraTransform1)
 	f2 = Frame(img, depth, cameraTransform2)
 
 	a.addFrame(f1)
-	# a.addFrame(f2)
+	a.addFrame(f2)
 
 	m.addRenderable(a.projection.getModelRenderable())
 

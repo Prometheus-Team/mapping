@@ -25,7 +25,7 @@ class CloudSet:
 		#locations of the points the clouds affect
 		self.points = cube(self.resolution) * self.resolution
 		self.cloudMap = CloudMap(self)
-		self.clouds = []
+		self.clouds = [Cloud(self, (0,0,0))]
 		self.cloudSetProjector = CloudSetProjector(self)
 
 	def addCloud(self, origin):
@@ -33,6 +33,7 @@ class CloudSet:
 
 	def getCloudWithOrigin(self, origin):
 		for i in self.clouds:
+			# print(i.origin, origin, i.origin == origin)
 			if np.all(i.origin == origin):
 				return i
 
@@ -77,23 +78,27 @@ class CloudSet:
 
 		volume = np.zeros(size)
 		startOrigin, endOrigin = self.cloudMap.getMinAndMaxOrigins()
-		startOrigin = startOrigin * self.resolution
+		startResolutionOrigin = startOrigin * self.resolution
 
 		for i in self.clouds:
-			minOrigin = ((i.origin * self.resolution) - startOrigin).astype(np.int32)
-			maxOrigin = (((i.origin + 1) * self.resolution) - startOrigin).astype(np.int32)
-			print("from", minOrigin, "to", maxOrigin)
-			volume[minOrigin[0]:maxOrigin[0], minOrigin[1]:maxOrigin[1], minOrigin[2]:maxOrigin[2]] = i.volume
+			minResolutionOrigin = ((i.origin * self.resolution) - startResolutionOrigin).astype(np.int32)
+			maxResolutionOrigin = (((i.origin + 1) * self.resolution) - startResolutionOrigin).astype(np.int32)
+			print("from", minResolutionOrigin, "to", maxResolutionOrigin)
+			volume[minResolutionOrigin[0]:maxResolutionOrigin[0], minResolutionOrigin[1]:maxResolutionOrigin[1], minResolutionOrigin[2]:maxResolutionOrigin[2]] = i.volume
 
 		return volume
 
 	def mergeCloudSet(self, cloudSet, weight):
 		self.addMissingCloudsFrom(cloudSet)
 
+		# for i in self.clouds:
+		# 	print("Cloud Origin:", i.origin)
+
 		for i in self.clouds:
 			toMerge = cloudSet.getCloudWithOrigin(i.origin)
-			print("Merge",i,"with",toMerge)
-			i.mergeCloud(toMerge, weight)
+			# print("Merge",i,"with",toMerge,"of origin", i.origin)
+			if toMerge != None:
+				i.mergeCloud(toMerge, weight)
 
 	def addMissingCloudsFrom(self, cloudSet):
 
@@ -115,8 +120,11 @@ class CloudSetProjector:
 
 	def infuseProjections(self, points, normals):
 
-		pointBounds = bounds(0.5 + points/CloudSet.pointScale)
+		scaledPoints = 0.5 + points/CloudSet.pointScale
+		pointBounds = bounds(scaledPoints)
 		blocks = self.getBlocksIn(pointBounds)
+
+		print("Blocks", blocks)
 
 		for i in blocks:
 			self.cloudSet.addCloud(i)
@@ -141,8 +149,11 @@ class CloudSetProjector:
 
 	def getBlocksIn(self, bounds):
 
-		bounds = np.array(bounds, dtype=np.int32)
-		bounds[1] = bounds[1] + 1
+		bounds = np.array(bounds)
+		bounds[0] = np.floor(bounds[0])
+		bounds[1] = np.ceil(bounds[1])
+
+		print("Exp Bounds", bounds)
 
 		xList = np.arange(bounds[0][0], bounds[1][0]).astype(dtype=np.int32)
 		yList = np.arange(bounds[0][1], bounds[1][1]).astype(dtype=np.int32)
@@ -278,6 +289,9 @@ class Cloud:
 		return volumeBounds, fieldBounds
 
 	def mergeCloud(self, cloud, weight):
+
+		print(1 - weight)
+		print(weight)
 
 		self.volume = (1 - weight) * self.volume + weight * cloud.volume
 		self.edge = (1 - weight) * self.edge + weight * cloud.edge

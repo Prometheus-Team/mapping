@@ -1,6 +1,5 @@
 
 from skimage import measure
-import pymesh
 
 from fieldgenerator import *
 from cloudset import *
@@ -32,12 +31,21 @@ class Projection:
 	def getModel(self):
 		cloudField = self.cloudSet.getCloud()
 		verts, faces, normals, values = (np.array((), dtype=np.float32) for i in range(4))
+
 		if np.any(cloudField > 0.1):
 			verts, faces, normals, values = measure.marching_cubes(cloudField, 0.1)
+
+		verts = self.compensateIndexNonNegativity(verts)
 		# edges = self.cloudSet.getEdgeStrength(verts)
 		# verts, faces, normals, edges = self.decimate(verts, faces, normals, edges, 3)
 
 		return verts, faces, normals
+
+	def compensateIndexNonNegativity(self, verts):
+
+		minOrigins, maxOrigins = self.cloudSet.cloudMap.getMinAndMaxOrigins()
+		return verts + minOrigins * self.cloudSet.resolution
+
 
 	def getModelRenderable(self):
 		verts, faces, normals = self.getModel()
@@ -61,7 +69,7 @@ if __name__ == '__main__':
 
 	depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
 	img = cv.imread('../testdata/ClippedDepthNormal.png')
-	cameraTransform = matrixTR((1,1,-1),(0,50,15))
+	cameraTransform = matrixTR((-13,1,-1),(0,50,15))
 
 	p = Projection()
 

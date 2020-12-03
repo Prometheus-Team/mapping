@@ -55,7 +55,6 @@ def bounds(points):
 	maxBound = np.nanmax(extremePoints, axis = 0)
 	minBound = np.nanmin(extremePoints, axis = 0)
 	return minBound, maxBound
-
 	
 def btcnt(name):
 	if name in globals():
