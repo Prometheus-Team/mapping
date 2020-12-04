@@ -6,11 +6,13 @@ from mapping.image_projection.cloudset import *
 from mapping.image_projection.projector import *
 from mapping.image_projection.decimator import *
 
-#from vtk import (vtkSphereSource, vtkPolyData, vtkDecimatePro)
+from client_data import ClientData
+
+ModelValues = ClientData.modelValues
 
 class Projection:
 
-	modelThreshold = 0.1
+	modelThreshold = 10
 
 	def __init__(self):
 		self.cloudSet = CloudSet()
@@ -34,8 +36,8 @@ class Projection:
 		cloudField = self.cloudSet.getCloud()
 		verts, faces, normals, values = (np.array((), dtype=np.float32) for i in range(4))
 
-		if np.any(cloudField > Projection.modelThreshold):
-			verts, faces, normals, values = measure.marching_cubes(cloudField, Projection.modelThreshold)
+		if np.any(cloudField > ModelValues.modelThreshold):
+			verts, faces, normals, values = measure.marching_cubes(cloudField, ModelValues.modelThreshold)
 
 		verts = self.compensateIndexNonNegativity(verts)
 		# edges = self.cloudSet.getEdgeStrength(verts)
@@ -60,7 +62,6 @@ class Projection:
 			edges = self.cloudSet.getEdgeStrength(verts)
 
 		return verts, faces, normals, edges
-
 
 
 if __name__ == '__main__':

@@ -10,15 +10,19 @@ import matplotlib.pyplot as plt
 from mapping.image_projection.previewer import *
 from mapping.image_projection.normalestimator import NormalEstimator
 
+from client_data import ClientData
+
+ProjectorValues = ClientData.projectorValues
+
 class Projector:
 
 	def __init__(self):
 		self.cloudset = None
 		self.width, self.height = 640, 480
 		self.dwidth, self.dheight = 320, 240
-		self.dx, self.dy = 48, 27
-		self.hfovd, self.vfovd = 57, 43
-		self.slantThreshold = 4
+		self.dx, self.dy = ProjectorValues.projectionResolution
+		self.hfovd, self.vfovd = ProjectorValues.hfov, ProjectorValues.vfov
+		self.slantThreshold = ProjectorValues.slantSeparation
 		self.slantSeparation = 1e6
 		self.separationThreshold = 1e3
 

@@ -6,6 +6,10 @@ from mapping.image_projection.util import *
 from mapping.image_projection.previewer import *
 from mapping.image_projection.fieldgenerator import *
 
+from client_data import ClientData
+
+CloudSetValues = ClientData.cloudValues
+
 class CloudSet:
 
 	fieldResolution = 7
