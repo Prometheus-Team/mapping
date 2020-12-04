@@ -1,8 +1,10 @@
-from normalestimator import NormalEstimator
+from mapping.image_projection.normalestimator import NormalEstimator
 
 import numpy as np
 
 class OBJExporter:
+
+	extension = '.obj'
 
 	def exportModel(mesh, name):
 		OBJExporter.export(mesh[0], mesh[1], mesh[2], name)
@@ -15,7 +17,9 @@ class OBJExporter:
 		print("Normals:", len(normals))
 
 		text = OBJExporter.getExportContent(vertices, faces, normals, name)
-		file = open(name + '.obj', 'w')
+		if not name.endswith(OBJExporter.extension):
+			name += OBJExporter.extension
+		file = open(name, 'w')
 		file.write(text)
 		file.close()
 

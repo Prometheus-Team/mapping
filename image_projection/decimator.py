@@ -2,8 +2,8 @@
 import numpy as np
 import time
 
-from previewer import *
-from normalestimator import *
+from mapping.image_projection.previewer import *
+from mapping.image_projection.normalestimator import *
 
 class R:
 

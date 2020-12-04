@@ -2,9 +2,9 @@
 import numpy as np
 import pyrr
 
-from util import *
-from previewer import *
-from normalestimator import *
+from mapping.image_projection.util import *
+from mapping.image_projection.previewer import *
+from mapping.image_projection.normalestimator import *
 
 class R:
 

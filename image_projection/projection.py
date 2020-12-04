@@ -1,14 +1,16 @@
 
 from skimage import measure
 
-from fieldgenerator import *
-from cloudset import *
-from projector import *
-from decimator import *
+from mapping.image_projection.fieldgenerator import *
+from mapping.image_projection.cloudset import *
+from mapping.image_projection.projector import *
+from mapping.image_projection.decimator import *
 
 #from vtk import (vtkSphereSource, vtkPolyData, vtkDecimatePro)
 
 class Projection:
+
+	modelThreshold = 0.1
 
 	def __init__(self):
 		self.cloudSet = CloudSet()
@@ -32,8 +34,8 @@ class Projection:
 		cloudField = self.cloudSet.getCloud()
 		verts, faces, normals, values = (np.array((), dtype=np.float32) for i in range(4))
 
-		if np.any(cloudField > 0.1):
-			verts, faces, normals, values = measure.marching_cubes(cloudField, 0.1)
+		if np.any(cloudField > Projection.modelThreshold):
+			verts, faces, normals, values = measure.marching_cubes(cloudField, Projection.modelThreshold)
 
 		verts = self.compensateIndexNonNegativity(verts)
 		# edges = self.cloudSet.getEdgeStrength(verts)

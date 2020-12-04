@@ -12,7 +12,7 @@ from pygame.locals import *
 from OpenGL.GL import *
 from OpenGL.GLU import *
 
-from util import *
+from mapping.image_projection.util import *
 
 class R:
 	previewResolution = (1000,1000)
@@ -24,8 +24,8 @@ class R:
 	xColor = (0.8,0,0)
 	yColor = (0,0.9,0)
 	zColor = (0.2,0.4,1)
-	vertexShaderPath = "shaders/vertex.shader"
-	fragmentShaderPath = "shaders/fragment.shader"
+	vertexShaderPath = "mapping/image_projection/shaders/vertex.shader"
+	fragmentShaderPath = "mapping/image_projection/shaders/fragment.shader"
 	autoRotateRate = 0.1
 	defaultPointSize = 1
 

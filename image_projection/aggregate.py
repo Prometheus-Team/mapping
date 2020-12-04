@@ -1,5 +1,6 @@
-from projection import *
-from obj_exporter import *
+
+from mapping.image_projection.projection import *
+from mapping.image_projection.obj_exporter import *
 
 class Aggregate:
 
@@ -20,13 +21,14 @@ class Frame:
 		self.cameraTransform = cameraTransform
 		self.projection = Projection()
 
-		self.projection.project(depth, img, cameraTransform)
+		self.projection.project(depth, image, cameraTransform)
 
 	def getCamera(self):
 		return Camera(57, 43, self.cameraTransform)
 
 
-if __name__ == '__main__':
+
+def startAggregate():
 
 	depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
 	img = cv.imread('../testdata/ClippedDepthNormal.png')
@@ -45,7 +47,7 @@ if __name__ == '__main__':
 	m.addRenderable(a.projection.getModelRenderable())
 
 	m.addCamera(f1.getCamera())
-	# m.addCamera(f2.getCamera())
+	m.addCamera(f2.getCamera())
 
 	m.addRenderables(a.projection.cloudSet.getCloudRenderables())
 
@@ -55,3 +57,7 @@ if __name__ == '__main__':
 
 
 	OBJExporter.exportModel(a.projection.getModel(), "Igno2")
+
+
+if __name__ == '__main__':
+	startAggregate()

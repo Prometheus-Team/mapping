@@ -3,12 +3,12 @@ import numpy as np
 from scipy import ndimage
 import cv2 as cv
 import math
-from previewer import *
 from numpy import genfromtxt
 import pyrr
 import matplotlib.pyplot as plt
 
-from normalestimator import NormalEstimator
+from mapping.image_projection.previewer import *
+from mapping.image_projection.normalestimator import NormalEstimator
 
 class Projector:
 

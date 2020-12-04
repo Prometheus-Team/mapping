@@ -2,9 +2,9 @@
 import numpy as np
 import pyrr
 
-from util import *
-from previewer import *
-from fieldgenerator import *
+from mapping.image_projection.util import *
+from mapping.image_projection.previewer import *
+from mapping.image_projection.fieldgenerator import *
 
 class CloudSet:
 
@@ -18,9 +18,9 @@ class CloudSet:
 	cloudEdgeColor = (0.9,0.8,0.4)
 
 	def __init__(self):
-		self.resolution = CloudSet.cloudSetResolution
-		self.cloudScale = CloudSet.cloudScale
-		self.pointScale = CloudSet.pointScale
+		self.resolution = CloudSetValues.cloudSetResolution
+		self.cloudScale = CloudSetValues.cloudScale
+		self.pointScale = CloudSetValues.pointScale
 
 		#locations of the points the clouds affect
 		self.points = cube(self.resolution) * self.resolution
@@ -115,12 +115,12 @@ class CloudSetProjector:
 
 	def __init__(self, cloudSet):
 		self.cloudSet = cloudSet
-		self.fieldGenerator = SemiBubbleGenerator(1, CloudSet.fieldResolution)
-		self.edgeFieldGenerator = FullBubbleGenerator(1, CloudSet.edgeFieldResolution)
+		self.fieldGenerator = SemiBubbleGenerator(1, CloudSetValues.fieldResolution)
+		self.edgeFieldGenerator = FullBubbleGenerator(1, CloudSetValues.edgeFieldResolution)
 
 	def infuseProjections(self, points, normals):
 
-		scaledPoints = 0.5 + points/CloudSet.pointScale
+		scaledPoints = 0.5 + points/CloudSetValues.pointScale
 		pointBounds = bounds(scaledPoints)
 		blocks = self.getBlocksIn(pointBounds)
 
@@ -241,7 +241,7 @@ class Cloud:
 		return (self.center - self.getSize()/2, self.center + self.getSize()/2)
 
 	def getPointIndex(self, points):
-		return np.rint((points/CloudSet.pointScale + Cloud.rawCenter) * self.cloudSet.resolution).astype(dtype=np.int32)
+		return np.rint((points/CloudSetValues.pointScale + Cloud.rawCenter) * self.cloudSet.resolution).astype(dtype=np.int32)
 
 	def getCloudEdgeStrength(self, points):
 		points = np.rint(points).astype(dtype=np.int32)
@@ -258,15 +258,15 @@ class Cloud:
 
 	def getVolumeRenderable(self):
 		points = self.offset(self.cloudSet.getCloudScaledPoints())
-		return Renderable(points, Renderable.POINTS, pointSize = self.volume/20, color=CloudSet.cloudVolumeColor)
+		return Renderable(points, Renderable.POINTS, pointSize = self.volume/20, color=CloudSetValues.cloudVolumeColor)
 
 	def getEdgeRenderable(self):
 		points = self.offset(self.cloudSet.getCloudScaledPoints())
-		return Renderable(points, Renderable.POINTS, pointSize = self.edge/10, color=CloudSet.cloudEdgeColor)
+		return Renderable(points, Renderable.POINTS, pointSize = self.edge/10, color=CloudSetValues.cloudEdgeColor)
 
 	def getBoundsRenderable(self):
 		verts, inds = RenderUtil.getBounds(self.offset(self.cloudSet.getCloudScaledPoints()))
-		return Renderable(verts, Renderable.WIREFRAME, indices=inds, color=CloudSet.cloudBoundsColor)
+		return Renderable(verts, Renderable.WIREFRAME, indices=inds, color=CloudSetValues.cloudBoundsColor)
 
 	def getVolumeField(self, point, fieldShape):
 
@@ -309,7 +309,7 @@ class CloudProjector:
 			self.addProjection(fields[i], points[i])
 
 	# def addMultiProjection(self, fields, points):
-	# 	points = np.rint((points/CloudSet.pointScale + self.origin) * self.cloudSet.resolution).astype(dtype=np.int32)
+	# 	points = np.rint((points/CloudSetValues.pointScale + self.origin) * self.cloudSet.resolution).astype(dtype=np.int32)
 	# 	fieldShape = fields.shape
 
 	# 	fieldBounds = np.array(((0,fieldShape[2]),(0,fieldShape[1]),(0,fieldShape[0])), dtype=np.int32)
@@ -335,7 +335,7 @@ class CloudProjector:
 
 	def addProjection(self, field, point):
 
-		point = self.cloud.getPointIndex(point - (self.cloud.origin * CloudSet.pointScale))
+		point = self.cloud.getPointIndex(point - (self.cloud.origin * CloudSetValues.pointScale))
 		fieldShape = field.shape
 		vb, fb = self.cloud.getVolumeField(point, fieldShape)
 
@@ -354,7 +354,7 @@ class CloudProjector:
 	def addEdgeProjection(self, field, point):
 
 		# print(point)
-		point = np.rint((point/CloudSet.pointScale + self.cloud.center) * self.cloud.cloudSet.resolution).astype(dtype=np.int32)
+		point = np.rint((point/CloudSetValues.pointScale + self.cloud.center) * self.cloud.cloudSet.resolution).astype(dtype=np.int32)
 		fieldShape = field.shape
 		vb, fb = self.cloud.getVolumeField(point, fieldShape)
 
@@ -366,6 +366,8 @@ class CloudProjector:
 		# print(vb, fb, "\n")
 
 		self.cloud.edge[vb[0][0]:vb[0][1], vb[1][0]:vb[1][1], vb[2][0]:vb[2][1]] += field[fb[0][0]:fb[0][1], fb[1][0]:fb[1][1], fb[2][0]:fb[2][1]]
+
+CloudSetValues = CloudSet
 
 
 if __name__ == '__main__':
