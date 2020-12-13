@@ -1,6 +1,20 @@
 
+if __name__ == '__main__':
+
+	import os
+	import sys
+
+	mainDirectory = os.getcwd()
+
+	sys.path.append(mainDirectory + '\\..\\..')
+
+	os.chdir(mainDirectory + '\\..\\..')
+
+
 from mapping.image_projection.projection import *
 from mapping.image_projection.obj_exporter import *
+
+from client_data import ClientData
 
 class Aggregate:
 
@@ -24,14 +38,14 @@ class Frame:
 		self.projection.project(depth, image, cameraTransform)
 
 	def getCamera(self):
-		return Camera(57, 43, self.cameraTransform)
+		return Camera(ClientData.projectorValues.hfov, ClientData.projectorValues.vfov, self.cameraTransform)
 
 
 
 def startAggregate():
 
-	depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
-	img = cv.imread('../testdata/ClippedDepthNormal.png')
+	depth = genfromtxt('mapping/testdata/depth3.csv', delimiter=',') * 10
+	img = cv.imread('mapping/testdata/ClippedDepthNormal.png')
 	cameraTransform1 = matrixTR((-1,1,-1),(0,50,15))
 	cameraTransform2 = matrixTR((-1,10,-1),(0,40,15))
 
@@ -60,4 +74,5 @@ def startAggregate():
 
 
 if __name__ == '__main__':
+
 	startAggregate()

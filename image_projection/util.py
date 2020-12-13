@@ -78,3 +78,7 @@ def cnt(name):
 def pcnt(name):
 	print(name, globals()[name])
 
+
+if __name__ == '__main__':
+	print(cube(2))
+

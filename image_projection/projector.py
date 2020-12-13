@@ -1,4 +1,16 @@
 
+if __name__ == '__main__':
+
+	import os
+	import sys
+
+	mainDirectory = os.getcwd()
+
+	sys.path.append(mainDirectory + '\\..\\..')
+
+	os.chdir(mainDirectory + '\\..\\..')
+
+
 import numpy as np
 from scipy import ndimage
 import cv2 as cv
@@ -111,28 +123,43 @@ class Projector:
 
 
 if __name__ == '__main__':
-	depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
-	img = cv.imread('../testdata/ClippedDepthNormal.png')
-	cameraTransform = matrixTR((1,2,0),(0,50,40))
 
+
+	#test 1
+	#print(Projector.edges(None, np.array([])))
+
+	#test 2
+	depth = genfromtxt('mapping/testdata/depth3.csv', delimiter=',') * 10
+	img = cv.imread('mapping/testdata/ClippedDepthNormal.png')
 	p = Projector()
 	p.openImage(img)
 	p.openDepth(depth)
-	points, normals, edgePoints = p.projectDepth(cameraTransform)
+	print(p.posFromDepth(np.array(p.depth.copy())))
 
-	print(p.getBounds(points, 7))
 
-	m = ModelPreview()
-	m.start()
 
-	colors = np.ones(points.shape)
-	colors[np.all(normals == 0, axis=1)] = (1,0.5,0)
+	# depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
+	# img = cv.imread('../testdata/ClippedDepthNormal.png')
+	# cameraTransform = matrixTR((1,2,0),(0,50,40))
 
-	normalProjections = points + normals/10
-	normalDraw = np.concatenate((points, normalProjections), axis=1)
+	# p = Projector()
+	# p.openImage(img)
+	# p.openDepth(depth)
+	# points, normals, edgePoints = p.projectDepth(cameraTransform)
 
-	m.addRenderable(Renderable(edgePoints[:,0:3], Renderable.POINTS, color=(0.1, 0.6,1)))
-	# m.addRenderable(Renderable(points, Renderable.POINTS, pointSize=3, color=colors))
-	# m.addRenderable(Renderable(normalDraw, Renderable.WIREFRAME, color=(0.1, 0.6,1)))
-	m.addCamera(Camera(57, 43, cameraTransform))
+	# print(p.getBounds(points, 7))
+
+	# m = ModelPreview()
+	# m.start()
+
+	# colors = np.ones(points.shape)
+	# colors[np.all(normals == 0, axis=1)] = (1,0.5,0)
+
+	# normalProjections = points + normals/10
+	# normalDraw = np.concatenate((points, normalProjections), axis=1)
+
+	# m.addRenderable(Renderable(edgePoints[:,0:3], Renderable.POINTS, color=(0.1, 0.6,1)))
+	# # m.addRenderable(Renderable(points, Renderable.POINTS, pointSize=3, color=colors))
+	# # m.addRenderable(Renderable(normalDraw, Renderable.WIREFRAME, color=(0.1, 0.6,1)))
+	# m.addCamera(Camera(57, 43, cameraTransform))
 
