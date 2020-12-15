@@ -8,23 +8,18 @@ from mapping.image_projection.fieldgenerator import *
 
 from client_data import ClientData
 
-CloudSetValues = ClientData.cloudValues
-
 class CloudSet:
 
 	fieldResolution = 7
 	edgeFieldResolution = 5
-	cloudSetResolution = 100
-	cloudScale = 3
-	pointScale = 6
 	cloudVolumeColor = (0.5,1,0.8)
 	cloudBoundsColor = (1,0.4,1)
 	cloudEdgeColor = (0.9,0.8,0.4)
 
 	def __init__(self):
-		self.resolution = CloudSetValues.cloudSetResolution
-		self.cloudScale = CloudSetValues.cloudScale
-		self.pointScale = CloudSetValues.pointScale
+		self.resolution = ClientData.cloudValues.cloudSetResolution.value
+		self.cloudScale = ClientData.cloudValues.cloudScale.value
+		self.pointScale = ClientData.cloudValues.pointScale.value
 
 		#locations of the points the clouds affect
 		self.points = cube(self.resolution) * self.resolution
@@ -119,12 +114,12 @@ class CloudSetProjector:
 
 	def __init__(self, cloudSet):
 		self.cloudSet = cloudSet
-		self.fieldGenerator = SemiBubbleGenerator(1, CloudSetValues.fieldResolution)
-		self.edgeFieldGenerator = FullBubbleGenerator(1, CloudSetValues.edgeFieldResolution)
+		self.fieldGenerator = SemiBubbleGenerator(1, ClientData.cloudValues.fieldResolution.value)
+		self.edgeFieldGenerator = FullBubbleGenerator(1, ClientData.cloudValues.edgeFieldResolution)
 
 	def infuseProjections(self, points, normals):
 
-		scaledPoints = 0.5 + points/CloudSetValues.pointScale
+		scaledPoints = 0.5 + points/ClientData.cloudValues.pointScale.value
 		pointBounds = bounds(scaledPoints)
 		blocks = self.getBlocksIn(pointBounds)
 
@@ -245,7 +240,7 @@ class Cloud:
 		return (self.center - self.getSize()/2, self.center + self.getSize()/2)
 
 	def getPointIndex(self, points):
-		return np.rint((points/CloudSetValues.pointScale + Cloud.rawCenter) * self.cloudSet.resolution).astype(dtype=np.int32)
+		return np.rint((points/ClientData.cloudValues.pointScale.value + Cloud.rawCenter) * self.cloudSet.resolution).astype(dtype=np.int32)
 
 	def getCloudEdgeStrength(self, points):
 		points = np.rint(points).astype(dtype=np.int32)
@@ -262,15 +257,15 @@ class Cloud:
 
 	def getVolumeRenderable(self):
 		points = self.offset(self.cloudSet.getCloudScaledPoints())
-		return Renderable(points, Renderable.POINTS, pointSize = self.volume/20, color=CloudSetValues.cloudVolumeColor)
+		return Renderable(points, Renderable.POINTS, pointSize = self.volume/20, color=ClientData.cloudValues.cloudVolumeColor)
 
 	def getEdgeRenderable(self):
 		points = self.offset(self.cloudSet.getCloudScaledPoints())
-		return Renderable(points, Renderable.POINTS, pointSize = self.edge/10, color=CloudSetValues.cloudEdgeColor)
+		return Renderable(points, Renderable.POINTS, pointSize = self.edge/10, color=ClientData.cloudValues.cloudEdgeColor)
 
 	def getBoundsRenderable(self):
 		verts, inds = RenderUtil.getBounds(self.offset(self.cloudSet.getCloudScaledPoints()))
-		return Renderable(verts, Renderable.WIREFRAME, indices=inds, color=CloudSetValues.cloudBoundsColor)
+		return Renderable(verts, Renderable.WIREFRAME, indices=inds, color=ClientData.cloudValues.cloudBoundsColor)
 
 	def getVolumeField(self, point, fieldShape):
 
@@ -339,7 +334,7 @@ class CloudProjector:
 
 	def addProjection(self, field, point):
 
-		point = self.cloud.getPointIndex(point - (self.cloud.origin * CloudSetValues.pointScale))
+		point = self.cloud.getPointIndex(point - (self.cloud.origin * ClientData.cloudValues.pointScale.value))
 		fieldShape = field.shape
 		vb, fb = self.cloud.getVolumeField(point, fieldShape)
 
@@ -358,7 +353,7 @@ class CloudProjector:
 	def addEdgeProjection(self, field, point):
 
 		# print(point)
-		point = np.rint((point/CloudSetValues.pointScale + self.cloud.center) * self.cloud.cloudSet.resolution).astype(dtype=np.int32)
+		point = np.rint((point/ClientData.cloudValues.pointScale.value + self.cloud.center) * self.cloud.cloudSet.resolution).astype(dtype=np.int32)
 		fieldShape = field.shape
 		vb, fb = self.cloud.getVolumeField(point, fieldShape)
 
@@ -370,8 +365,6 @@ class CloudProjector:
 		# print(vb, fb, "\n")
 
 		self.cloud.edge[vb[0][0]:vb[0][1], vb[1][0]:vb[1][1], vb[2][0]:vb[2][1]] += field[fb[0][0]:fb[0][1], fb[1][0]:fb[1][1], fb[2][0]:fb[2][1]]
-
-CloudSetValues = CloudSet
 
 
 if __name__ == '__main__':

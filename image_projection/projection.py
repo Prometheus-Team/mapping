@@ -33,7 +33,7 @@ class Projection:
 		self.projector.openImage(img)
 		points, normals, edgePoints = self.projector.projectDepth(cameraTransform)
 
-		print("Bounds", bounds(0.5 + points/CloudSet.pointScale))
+		print("Bounds", bounds(0.5 + points/ClientData.cloudValues.pointScale.value))
 
 		self.cloudSet.cloudSetProjector.infuseProjections(points, normals)
 		# self.cloudSet.cloudSetProjector.infuseEdgeProjections(edgePoints)
@@ -45,7 +45,7 @@ class Projection:
 		cloudField = self.cloudSet.getCloud()
 		verts, faces, normals, values = (np.array((), dtype=np.float32) for i in range(4))
 
-		if np.any(cloudField > ModelValues.modelThreshold):
+		if np.any(cloudField > ClientData.modelValues.modelThreshold.value):
 			verts, faces, normals, values = measure.marching_cubes(cloudField, ClientData.modelValues.modelThreshold.value)
 
 		verts = self.compensateIndexNonNegativity(verts)
@@ -62,7 +62,7 @@ class Projection:
 
 	def getModelRenderable(self):
 		verts, faces, normals = self.getModel()
-		return Renderable(self.cloudSet.pointScaleDown(verts) - CloudSet.cloudScale, Renderable.SOLID, indices=faces, normal=normals)
+		return Renderable(self.cloudSet.pointScaleDown(verts) - ClientData.cloudValues.cloudScale.value, Renderable.SOLID, indices=faces, normal=normals)
 
 	def decimate(self, verts, faces, normals, edges, iterations):
 

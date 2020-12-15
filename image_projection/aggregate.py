@@ -19,12 +19,12 @@ from client_data import ClientData
 class Aggregate:
 
 	def __init__(self):
-		self.frames = []
+		self.framesCount = 0
 		self.projection = Projection()
 
 	def addFrame(self, frame):
-		self.frames.append(frame)
-		weight = 1/len(self.frames)
+		self.framesCount += 1
+		weight = 1/self.framesCount
 		self.projection.addWeightedProjection(frame.projection, weight)
 
 class Frame:
