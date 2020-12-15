@@ -21,11 +21,7 @@ from mapping.image_projection.obj_exporter import *
 
 from client_data import ClientData
 
-ModelValues = ClientData.modelValues
-
 class Projection:
-
-	modelThreshold = 10
 
 	def __init__(self):
 		self.cloudSet = CloudSet()
@@ -50,7 +46,7 @@ class Projection:
 		verts, faces, normals, values = (np.array((), dtype=np.float32) for i in range(4))
 
 		if np.any(cloudField > ModelValues.modelThreshold):
-			verts, faces, normals, values = measure.marching_cubes(cloudField, ModelValues.modelThreshold)
+			verts, faces, normals, values = measure.marching_cubes(cloudField, ClientData.modelValues.modelThreshold.value)
 
 		verts = self.compensateIndexNonNegativity(verts)
 		# edges = self.cloudSet.getEdgeStrength(verts)

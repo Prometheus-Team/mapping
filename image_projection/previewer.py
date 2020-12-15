@@ -1,3 +1,15 @@
+
+if __name__ == '__main__':
+
+	import os
+	import sys
+
+	mainDirectory = os.getcwd()
+
+	sys.path.append(mainDirectory + '\\..\\..')
+
+	os.chdir(mainDirectory + '\\..\\..')
+
 import pygame as pg
 import numpy as np
 import OpenGL.GL.shaders

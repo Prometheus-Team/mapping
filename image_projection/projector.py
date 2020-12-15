@@ -24,17 +24,13 @@ from mapping.image_projection.normalestimator import NormalEstimator
 
 from client_data import ClientData
 
-ProjectorValues = ClientData.projectorValues
-
 class Projector:
 
 	def __init__(self):
 		self.cloudset = None
 		self.width, self.height = 640, 480
 		self.dwidth, self.dheight = 320, 240
-		self.dx, self.dy = ProjectorValues.projectionResolution
-		self.hfovd, self.vfovd = ProjectorValues.hfov, ProjectorValues.vfov
-		self.slantThreshold = ProjectorValues.slantSeparation
+		self.dx, self.dy = ClientData.projectorValues.projectionResolution
 		self.slantSeparation = 1e6
 		self.separationThreshold = 1e3
 
@@ -44,6 +40,7 @@ class Projector:
 		self.xx, self.yy = None, None
 
 	def openImage(self, rgb):
+		self.dx, self.dy = ClientData.projectorValues.projectionResolution
 		self.rgb = rgb
 		edges = cv.Canny(cv.cvtColor(rgb, cv.COLOR_BGR2GRAY), 50, 50)
 		dst = np.clip(cv.blur(edges, (5,5)).astype(dtype=np.uint16) * 10, 0, 255)
@@ -52,6 +49,7 @@ class Projector:
 		# plt.show()
 
 	def openDepth(self, depth):
+		self.dx, self.dy = ClientData.projectorValues.projectionResolution
 		self.depth = cv.resize(depth, (self.dx, self.dy), interpolation = cv.INTER_AREA)
 		self.worldCoords(self.dx, self.dy)
 
@@ -78,8 +76,9 @@ class Projector:
 		return np.abs(dx) + np.abs(dy)
 
 	def worldCoords(self, width, height):
-		hFov = math.radians(self.hfovd)
-		vFov = math.radians(self.vfovd)
+		hfovd, vfovd = ClientData.projectorValues.hfov, ClientData.projectorValues.vfov
+		hFov = math.radians(hfovd)
+		vFov = math.radians(vfovd)
 		cx, cy = width/2, height/2
 		fx = width/(2*math.tan(hFov/2))
 		fy = height/(2*math.tan(vFov/2))
@@ -97,7 +96,7 @@ class Projector:
 	def posFromDepth(self, depth):
 		length = depth.shape[0] * depth.shape[1]
 
-		depth[self.edges(depth) > self.slantThreshold] = self.slantSeparation
+		depth[self.edges(depth) > ClientData.projectorValues.slantSeparation.value] = self.slantSeparation
 		z = depth.reshape(length);
 
 		return np.dstack((self.xx * z, self.yy * z, z)).reshape((length, 3))
