@@ -27,7 +27,7 @@ from OpenGL.GLU import *
 from mapping.image_projection.util import *
 
 class R:
-	previewResolution = (600, 600)
+	previewResolution = (800, 800)
 	bgColor = (0.2, 0.2, 0.2)
 	gridColor = (0.3, 0.3, 0.3)
 	gridCount = 21

@@ -89,95 +89,95 @@ if __name__ == '__main__':
 
 
 	#test2
-	# depth = genfromtxt('mapping/testdata/depth3.csv', delimiter=',') * 10
-	# img = cv.imread('mapping/testdata/ClippedDepthNormal.png')
-	depth = genfromtxt('mapping/testdata/11_image.csv', delimiter=',')
-	img = cv.imread('mapping/testdata/11_image.png')
-	cameraTransform = matrixTR((0,0,0),(0,0,0))
-	# cameraTransform = matrixTR((-13,1,-1),(0,50,15))
-
-	p = Projection()
-
-	p.project(depth, img, cameraTransform)
-
-	verts, faces, normals = p.getModel()
-	print(verts.shape, faces.shape)
-	OBJExporter.exportModel(p.getModel(), "model")
-
-
-
-
-	# m = ModelPreview()
-
-	# depth = genfromtxt('mapping/testdata/depth3.csv', delimiter=',') * 10
-	# img = cv.imread('mapping/testdata/ClippedDepthNormal.png')
-	# # depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
-	# # img = cv.imread('../testdata/ClippedDepthNormal.png')
-	# cameraTransform = matrixTR((-13,1,-1),(0,50,15))
+	# # depth = genfromtxt('mapping/testdata/depth3.csv', delimiter=',') * 10
+	# # img = cv.imread('mapping/testdata/ClippedDepthNormal.png')
+	# depth = genfromtxt('mapping/testdata/11_image.csv', delimiter=',')
+	# img = cv.imread('mapping/testdata/11_image.png')
+	# cameraTransform = matrixTR((0,0,0),(0,0,0))
+	# # cameraTransform = matrixTR((-13,1,-1),(0,50,15))
 
 	# p = Projection()
 
 	# p.project(depth, img, cameraTransform)
 
 	# verts, faces, normals = p.getModel()
+	# print(verts.shape, faces.shape)
+	# OBJExporter.exportModel(p.getModel(), "model")
 
-	# # p = Projector()
-	# # c = CloudSet()
-	# # d = Decimator()
+
+
+
+	m = ModelPreview()
+
+	depth = genfromtxt('mapping/testdata/depth3.csv', delimiter=',') * 10
+	img = cv.imread('mapping/testdata/ClippedDepthNormal.png')
+	# depth = genfromtxt('../testdata/depth3.csv', delimiter=',') * 10
+	# img = cv.imread('../testdata/ClippedDepthNormal.png')
+	cameraTransform = matrixTR((-13,1,-1),(0,50,15))
+
+	p = Projection()
+
+	p.project(depth, img, cameraTransform)
+
+	verts, faces, normals = p.getModel()
+
+	# p = Projector()
+	# c = CloudSet()
+	# d = Decimator()
 	
-	# # p.openImage(img)
-	# # p.openDepth(depth)
-	# # points, normals, edgePoints = p.projectDepth(cameraTransform)
+	# p.openImage(img)
+	# p.openDepth(depth)
+	# points, normals, edgePoints = p.projectDepth(cameraTransform)
 
-	# # c.cloudSetProjector.infuseProjections(points, normals)
-	# # c.cloudSetProjector.infuseEdgeProjections(edgePoints)
+	# c.cloudSetProjector.infuseProjections(points, normals)
+	# c.cloudSetProjector.infuseEdgeProjections(edgePoints)
 
-	# # colors = np.ones(points.shape)
-	# # colors[np.all(normals == 0, axis=1)] = (1, 0.5, 0)
+	# colors = np.ones(points.shape)
+	# colors[np.all(normals == 0, axis=1)] = (1, 0.5, 0)
 
-	# # normalProjections = points + normals/10
-	# # normalDraw = np.concatenate((points, normalProjections), axis=1)
+	# normalProjections = points + normals/10
+	# normalDraw = np.concatenate((points, normalProjections), axis=1)
 
-	# # verts, faces, normals, values = measure.marching_cubes(c.getCloud(), 0.1)
-	# # edges = c.getEdgeStrength(verts)
-	# # print(edges[200:300])
+	# verts, faces, normals, values = measure.marching_cubes(c.getCloud(), 0.1)
+	# edges = c.getEdgeStrength(verts)
+	# print(edges[200:300])
 
-	# # print(edges[edges > 0])
+	# print(edges[edges > 0])
 
-	# # verts, faces, normals, edges = d.decimate(verts, faces, normals, 3, edges)
+	# verts, faces, normals, edges = d.decimate(verts, faces, normals, 3, edges)
 
-	# # normals = NormalEstimator.getMeshNormals(verts, faces)
+	# normals = NormalEstimator.getMeshNormals(verts, faces)
 
-	# # normalProjections = verts + normals/10
-	# # normalDraw = np.concatenate((points, normalProjections), axis=1)
+	# normalProjections = verts + normals/10
+	# normalDraw = np.concatenate((points, normalProjections), axis=1)
 
-	# # np.savetxt('../testdata/blobverts.csv', verts)
-	# # np.savetxt('../testdata/blobfaces.csv', faces)
-	# # np.savetxt('../testdata/blobnormals.csv', normals)
+	# np.savetxt('../testdata/blobverts.csv', verts)
+	# np.savetxt('../testdata/blobfaces.csv', faces)
+	# np.savetxt('../testdata/blobnormals.csv', normals)
 	
 
-	# # mesh = pymesh.form_mesh(vertices, faces)
+	# mesh = pymesh.form_mesh(vertices, faces)
 
-	# # m.addRenderable(Renderable(edgePoints[...,0:3], Renderable.POINTS, color=(0.1, 0.6,1)))
-	# # m.addRenderable(Renderable(points, Renderable.POINTS, pointSize=3, color=colors))
-	# # m.addRenderable(Renderable(normalDraw, Renderable.WIREFRAME, color=(0.1, 0.6,1)))
-	# # m.addCamera(Camera(57, 43, cameraTransform))
+	# m.addRenderable(Renderable(edgePoints[...,0:3], Renderable.POINTS, color=(0.1, 0.6,1)))
+	# m.addRenderable(Renderable(points, Renderable.POINTS, pointSize=3, color=colors))
+	# m.addRenderable(Renderable(normalDraw, Renderable.WIREFRAME, color=(0.1, 0.6,1)))
+	# m.addCamera(Camera(57, 43, cameraTransform))
 
-	# m.addRenderables(p.cloudSet.getCloudRenderables())
+	m.addRenderables(p.cloudSet.getCloudRenderables())
 
-	# # print(verts)
-	# # ptcnt('raver')
+	# print(verts)
+	# ptcnt('raver')
 
-	# # m.addRenderable(Renderable(p.cloudSet.pointScaleDown(verts) - 3, Renderable.SOLID, indices=faces, normal=normals))
+	# m.addRenderable(Renderable(p.cloudSet.pointScaleDown(verts) - 3, Renderable.SOLID, indices=faces, normal=normals))
 
-	# m.addRenderable(p.getModelRenderable())
+	m.addRenderable(p.getModelRenderable())
 
-	# # verts, inds = RenderUtil.getBounds(p.cloudSet.getCloud())
-	# # m.addRenderable(Renderable(verts, Renderable.WIREFRAME, indices=inds, color=(1,0.8,1)))
+	# verts, inds = RenderUtil.getBounds(p.cloudSet.getCloud())
+	# m.addRenderable(Renderable(verts, Renderable.WIREFRAME, indices=inds, color=(1,0.8,1)))
 
 	
-	# # m.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=1, color=(verts + 1)/2))
+	# m.addRenderable(Renderable(verts, Renderable.POINTS, pointSize=1, color=(verts + 1)/2))
 
-	# time.sleep(1)
+	time.sleep(1)
 
-	# m.start()
+	m.start()
